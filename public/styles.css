@@ -1,0 +1,102 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Garante que o body ocupe toda a altura */
+}
+
+.chat-container {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 600px; /* Limita a largura máxima */
+    display: flex;
+    flex-direction: column;
+    height: 80vh; /* Altura relativa à viewport */
+    max-height: 700px; /* Limita a altura máxima */
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    padding: 15px;
+    margin: 0;
+    border-bottom: 1px solid #eee;
+    font-size: 1.2em;
+}
+
+#chatbox {
+    flex-grow: 1; /* Faz a chatbox ocupar o espaço disponível */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo passar da altura */
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 15px;
+    line-height: 1.4;
+    max-width: 80%; /* Largura máxima da mensagem */
+    word-wrap: break-word; /* Quebra palavras longas */
+}
+
+.user-message {
+    background-color: #007bff;
+    color: white;
+    align-self: flex-end; /* Alinha à direita (dentro do flex container pai, que é a chatbox) */
+    margin-left: auto; /* Empurra para a direita */
+    border-bottom-right-radius: 5px;
+}
+
+.bot-message {
+    background-color: #e9e9eb;
+    color: #333;
+    align-self: flex-start; /* Alinha à esquerda */
+    margin-right: auto; /* Empurra para a esquerda */
+    border-bottom-left-radius: 5px;
+}
+
+.message p {
+    margin: 0;
+}
+
+#input-area {
+    display: flex;
+    padding: 15px;
+    background-color: #f8f9fa;
+}
+
+#userInput {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    margin-right: 10px;
+    font-size: 1em;
+}
+
+#sendButton {
+    padding: 10px 20px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s ease;
+}
+
+#sendButton:hover {
+    background-color: #218838;
+}
+
+/* Estilo para feedback de carregamento (opcional) */
+.loading p { /* Aplica estilo ao parágrafo dentro da div loading */
+    font-style: italic;
+    color: #888;
+}

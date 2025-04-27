@@ -1,0 +1,17 @@
+import { googleAI } from '@genkit-ai/googleai';
+import { firebase } from '@genkit-ai/firebase'; // Import plugin here
+import { defineDotprompt, dotprompt } from '@genkit-ai/dotprompt'; // Needed if using dotprompts later
+import { genkit } from 'genkit'; // Main genkit import if needed for config logic
+
+export default {
+  plugins: [
+    googleAI(), // Plugin do Google AI (Gemini)
+    firebase(), // Plugin do Firebase (Tracing, etc.)
+    // Adicione outros plugins aqui se necessário (ex: dotprompt())
+  ],
+  flowStateStore: 'firebase', // Opcional: Define onde salvar o estado dos flows (se usar flows complexos)
+  traceStore: 'firebase', // Define onde salvar os traces (logs de execução)
+  cacheStore: 'firebase', // Opcional: Define onde fazer cache (se configurado)
+  logLevel: 'debug',
+  enableTracingAndMetrics: true,
+};
