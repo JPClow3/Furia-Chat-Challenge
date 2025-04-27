@@ -9,10 +9,12 @@ const API_ENDPOINT = 'http://127.0.0.1:5001/furia-chat-challenge/us-central1/api
 
 // --- Event Listeners ---
 sendButton.addEventListener('click', sendMessage);
-userInput.addEventListener('keypress', function (event) {
+userInput.addEventListener('keypress', function(event) {
     // Envia a mensagem se a tecla Enter for pressionada
     if (event.key === 'Enter') {
         sendMessage();
+        // Prevent default form submission if inside a form
+        event.preventDefault();
     }
 });
 
@@ -28,13 +30,15 @@ function addMessageToChatbox(text, type) {
     messageElement.classList.add('message', type === 'user' ? 'user-message' : 'bot-message');
 
     const paragraph = document.createElement('p');
-    paragraph.textContent = text; // Exibe o texto diretamente
+    // Render Markdown safely - VERY basic example, consider a library like Marked or Showdown for full support
+    // This example just replaces \n with <br> which is safe but limited.
+    paragraph.innerHTML = text.replace(/\n/g, '<br>');
     messageElement.appendChild(paragraph);
 
     chatbox.appendChild(messageElement);
 
     // Rola para o final da chatbox para mostrar a nova mensagem
-    chatbox.scrollTop = chatbox.scrollHeight;
+    scrollToBottom();
 }
 
 /**
@@ -50,54 +54,72 @@ async function sendMessage() {
     // 1. Exibe a mensagem do usuário na chatbox
     addMessageToChatbox(messageText, 'user');
     userInput.value = ''; // Limpa o campo de input
+    userInput.focus(); // Refocus input after sending
 
-    // (Opcional) Mostra um feedback de "carregando"
+    // 2. (Opcional) Mostra um feedback de "carregando"
     const loadingElement = document.createElement('div');
     loadingElement.classList.add('message', 'bot-message', 'loading');
     loadingElement.innerHTML = '<p>Digitando...</p>';
     chatbox.appendChild(loadingElement);
-    chatbox.scrollTop = chatbox.scrollHeight;
+    scrollToBottom();
+
 
     try {
-        // 2. Envia a mensagem para a API backend
+        // 3. Envia a mensagem para a API backend
         const response = await fetch(API_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({message: messageText}), // Envia no formato esperado pelo backend
+            body: JSON.stringify({ message: messageText }), // Envia no formato esperado pelo backend
         });
 
-        // Remove o feedback de "carregando"
-        chatbox.removeChild(loadingElement);
+        // Remove o feedback de "carregando" - needs reference outside try? No, should be ok.
+        const loadingIndicators = chatbox.querySelectorAll('.loading');
+        loadingIndicators.forEach(el => el.remove());
+
 
         // Espera o corpo da resposta ser lido como JSON
-        const data = await response.json();
+        const data = await response.json(); // Throws on invalid JSON
 
         if (!response.ok) {
             // Se a resposta não for OK (ex: erro 400, 500), mostra o erro vindo do JSON
-            console.error("Erro da API:", data);
-            // Usa data.reply se existir (como no erro 500 que ajustamos), senão usa data.error ou um fallback
-            addMessageToChatbox(data.reply || data.error || `Ocorreu um erro na comunicação com o servidor (${response.status}).`, 'bot');
+            console.error("Erro da API:", response.status, data);
+            // Use data.reply if it exists and contains an error message from the backend
+            const errorMsg = data?.reply || data?.error || `Ocorreu um erro (${response.status}). Tente novamente.`;
+            addMessageToChatbox(errorMsg, 'bot');
             return;
         }
 
-        // 3. Recebe a resposta da API e exibe na chatbox
+        // 4. Recebe a resposta da API e exibe na chatbox
         if (data && data.reply) {
-            // A resposta JSON da API contém a chave 'reply' com o texto do bot
             addMessageToChatbox(data.reply, 'bot');
         } else {
+            console.warn("Resposta inesperada da API:", data);
             addMessageToChatbox("Recebi uma resposta inesperada do servidor.", 'bot');
         }
 
     } catch (error) {
         // Remove o feedback de "carregando" se ainda existir
-        if (chatbox.contains(loadingElement)) {
-            chatbox.removeChild(loadingElement);
-        }
+        const loadingIndicators = chatbox.querySelectorAll('.loading');
+        loadingIndicators.forEach(el => el.remove());
+
         console.error('Erro ao enviar mensagem:', error);
-        addMessageToChatbox('Não foi possível conectar ao assistente. Verifique sua conexão ou tente novamente mais tarde.', 'bot');
+        // Check if it's a network error (TypeError: Failed to fetch often indicates network/CORS issues)
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            addMessageToChatbox('Não foi possível conectar ao assistente. Verifique sua conexão ou se o servidor está rodando.', 'bot');
+        } else {
+            addMessageToChatbox('Ocorreu um erro ao processar sua mensagem. Tente novamente mais tarde.', 'bot');
+        }
     }
 }
 
-// Mensagem inicial do bot (já está no HTML)
+/**
+ * Rola a chatbox para o final.
+ */
+function scrollToBottom() {
+    chatbox.scrollTop = chatbox.scrollHeight;
+}
+
+// Adiciona foco inicial ao campo de input quando a página carrega
+userInput.focus();

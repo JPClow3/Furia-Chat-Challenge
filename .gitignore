@@ -1,17 +1,17 @@
+# === Node & Dependencies ===
+# Ignore node_modules in both root and functions directory
+/node_modules/
+/functions/node_modules/
+
 # Logs
-logs
-*.log
 npm-debug.log*
+yarn-error.log
 yarn-debug.log*
-yarn-error.log*
-firebase-debug.log*
-firebase-debug.*.log*
 
 # Firebase cache
 .firebase/
 
 # Firebase config
-
 # Uncomment this if you'd like others to create their own Firebase project.
 # For a team working on the same Firebase project(s), it is recommended to leave
 # it commented so all members can deploy to the same project(s) in .firebaserc.
@@ -44,26 +44,70 @@ bower_components
 # Compiled binary addons (http://nodejs.org/api/addons.html)
 build/Release
 
-# Dependency directories
-node_modules/
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional REPL history
-.node_repl_history
-
 # Output of 'npm pack'
 *.tgz
 
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
+# === Build Output ===
+# Compiled TypeScript files from functions directory
+/functions/lib/
 
-# dataconnect generated files
-.dataconnect
+# TypeScript v1 declaration files (keep if you use them, often replaced by node_modules/@types)
+# typings/
+
+# === Firebase / Google Cloud ===
+# Firebase Emulator logs and data
+*.log
+*-debug.log
+*.snapshot
+firestore-data/ # Optional: If you export emulator data locally
+database_export/ # Optional: If you export emulator data locally
+pubsub-data/ # Optional: If you export emulator data locally
+storage_export/ # Optional: If you export emulator data locally
+.firebase/ # Firebase Emulator runtime state
+
+# Google Cloud SDK credentials (NEVER commit service account keys!)
+# It's best practice *not* to download these keys into your project folder at all.
+# Adding a pattern here is a safety net in case one is accidentally added.
+*serviceAccountKey*.json
+*.credential.json
+
+# Firebase Hosting cache/metadata
+.firebase/hosting.*.cache
+
+# === Environment Variables ===
+# IMPORTANT: Never commit sensitive environment variables or secrets!
+# Use .env files for local development only. Use Firebase Functions Config for deployment.
+.env
+.env.*
+*.env
+# Explicitly ignore .env inside functions too
+functions/.env
+functions/.env.*
+functions/*.env
+
+# === Operating System Files ===
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# === IDE / Editor specific files ===
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# === Other ===
+# Optional: Genkit or other tool caches (if they appear outside node_modules)
+# .genkit-cache/
