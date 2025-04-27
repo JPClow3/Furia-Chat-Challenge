@@ -4,15 +4,16 @@
     "src"
   ],
   "compilerOptions": {
-    "module": "NodeNext",
-    "noImplicitReturns": true,
+    "module": "commonjs",
+    "target": "es2020",
+    "rootDir": "src",
     "outDir": "lib",
-    "sourceMap": true,
     "strict": true,
-    "target": "es2017",
-    "skipLibCheck": true,
+    "noImplicitReturns": true,
     "esModuleInterop": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "sourceMap": true,
     "noUnusedLocals": true
   }
 }

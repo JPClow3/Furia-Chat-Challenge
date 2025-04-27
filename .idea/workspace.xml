@@ -7,7 +7,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="" />
+    <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/firebase.json" beforeDir="false" afterPath="$PROJECT_DIR$/firebase.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/lib/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/functions/lib/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/lib/index.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/functions/lib/index.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/script.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/styles.css" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -87,7 +99,7 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "advanced.settings",
-    "ts.external.directory.path": "C:\\Users\\lives\\AppData\\Local\\Programs\\WebStorm\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
+    "ts.external.directory.path": "C:\\furia-chat-challenge\\functions\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -123,7 +135,7 @@
       <updated>1745529265168</updated>
       <workItem from="1745529268041" duration="2000" />
       <workItem from="1745604592327" duration="31851000" />
-      <workItem from="1745717345170" duration="6298000" />
+      <workItem from="1745717345170" duration="11064000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />

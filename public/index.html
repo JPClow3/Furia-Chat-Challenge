@@ -2,40 +2,35 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>FURIA Chat Challenge</title>
-    <!-- Link Google Fonts (optional but nice) -->
+    <meta content="width=device-width,initial-scale=1.0" name="viewport">
+    <title>FURIA CS Chatbot</title>
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
-    <!-- Add Favicon (Optional) -->
-    <!-- <link rel="icon" href="favicon.ico" type="image/x-icon"> -->
 </head>
 <body>
-<div class="chat-container">
-    <header class="chat-header">
-        <!-- Simple Text Logo -->
-        <span class="logo-text">FURIA</span>
-        <h1>Assistente CS</h1>
+<main class="chat-container" role="application">
+    <header class="chat-header" role="banner">
+        <img alt="Logo FURIA" class="logo" src="logo-furia.png">
+        <h1>Assistente FURIA CS</h1>
     </header>
-    <div class="chatbox" id="chatbox">
-        <!-- Initial Bot Message -->
+
+    <section aria-live="polite" class="chatbox" id="chatbox" role="log">
         <div class="message bot-message">
-            <p>Olá! Eu sou o assistente especialista na FURIA CS. Pergunte-me sobre o time!</p>
+            <p>Olá! Eu sou o assistente do time de CS da FURIA. Pergunte o que quiser!</p>
         </div>
-        <!-- Messages will be added here by JS -->
-    </div>
-    <footer class="input-area">
-        <input autocomplete="off" id="userInput" placeholder="Digite sua pergunta..." type="text">
+    </section>
+
+    <footer class="input-area" role="region">
+        <input aria-label="Campo de entrada de mensagem" autocomplete="off" id="userInput" placeholder="Digite sua mensagem..." type="text">
         <button aria-label="Enviar mensagem" id="sendButton">
-            <!-- Simple Send Icon using SVG (Inline) -->
-            <svg fill="currentColor" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+            <svg fill="currentColor" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
             </svg>
         </button>
     </footer>
-</div>
+</main>
 
 <script src="script.js"></script>
 </body>
