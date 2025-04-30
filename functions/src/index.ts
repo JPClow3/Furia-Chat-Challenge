@@ -1,213 +1,164 @@
+/* eslint-disable */
 // functions/src/index.ts
 
-// Importações do Firebase, Node.js e variáveis de ambiente
-import * as dotenv from 'dotenv';
+import * as dotenv from "dotenv";
 import * as functions from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
-import express from 'express';
-import cors from 'cors';
-import * as z from 'zod';
+import express from "express";
+import cors from "cors";
+import * as z from "zod"; // Zod já está importado, necessário para z.infer
+// Importações do Genkit e Plugins
+import {genkit} from "genkit";
+import {vertexAI} from "@genkit-ai/vertexai";
 
-// Importações do Genkit e Plugins VERTEX AI
-import {genkit} from 'genkit';
-import {gemini20Flash, vertexAI} from '@genkit-ai/vertexai';
 // Importação da biblioteca HLTV
-import HLTV from 'hltv';
+import HLTV from "hltv";
 // Importação da biblioteca Wikipedia
-import wiki, {Page} from 'wikipedia';
+import wiki, {Page} from "wikipedia";
+import * as path from "node:path";
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-// --- Definição do Enum TeamPlayerType ---
 export enum TeamPlayerType {
-    Coach = 'Coach',
-    Starter = 'Starter',
-    Substitute = 'Substitute',
-    Benched = 'Benched'
+    Coach = "Coach",
+    Starter = "Starter",
+    Substitute = "Substitute",
+    Benched = "Benched",
 }
 
-logger.info("Iniciando função com PLUGIN VERTEX AI e Gemini 2.0 Flash...");
+logger.info("Iniciando função com PLUGIN VERTEX AI...");
 
-// --- Variáveis de Ambiente/Configuração ---
 const GCLOUD_PROJECT = process.env.GOOGLE_CLOUD_PROJECT!;
 const GCLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION!;
 
 if (!GCLOUD_PROJECT || !GCLOUD_LOCATION) {
-    logger.error(
-        "AVISO: Variáveis GOOGLE_CLOUD_PROJECT ou GOOGLE_CLOUD_LOCATION não definidas no .env."
-    );
+    logger.error("AVISO: Variáveis GOOGLE_CLOUD_PROJECT ou GOOGLE_CLOUD_LOCATION não definidas no .env.");
 } else {
     logger.info(`GOOGLE_CLOUD_PROJECT: ${GCLOUD_PROJECT}, LOCATION: ${GCLOUD_LOCATION}`);
 }
 
-// --- Instância Genkit com Vertex AI ---
+// --- Criar a instância configurada do Genkit com Vertex AI ---
 const ai = genkit({
-    plugins: [
-        vertexAI({ projectId: GCLOUD_PROJECT, location: GCLOUD_LOCATION }),
-    ],
+    plugins: [vertexAI({ projectId: GCLOUD_PROJECT, location: GCLOUD_LOCATION })],
 });
 
-// --- Tool: Elenco Atual da FURIA ---
-const furiaRosterInputSchema = z.object({});
-const getFuriaRosterTool = ai.defineTool(
+// --- Tool: Elenco Atual da FURIA (Correções aplicadas) ---
+const furiaRosterToolInputSchema = z.object({});
+const getFuriaRosterTool = ai.defineTool( // Usando ai.defineTool
     {
         name: "getFuriaRoster",
-        description: "Busca a escalação ATUAL detalhada do time FURIA CS2 usando dados da HLTV.",
-        inputSchema: furiaRosterInputSchema,
+        description: "Busca a escalação atual de jogadores do time de CS2 da FURIA Esports diretamente do HLTV.org. Use esta ferramenta sempre que for perguntado sobre os jogadores atuais ou o elenco.",
+        inputSchema: furiaRosterToolInputSchema,
+        // Schema de Saída CORRIGIDO: Removido 'coach'
         outputSchema: z.object({
-            players: z
-                .array(z.object({ name: z.string(), type: z.nativeEnum(TeamPlayerType) }))
-                .optional()
-                .describe("Lista de jogadores e seus tipos (Coach, Starter, Substitute, Benched)."),
-            error: z.string().optional().describe("Mensagem de erro, se a busca falhar."),
+            players: z.array(z.object({
+                name: z.string().describe("Nome do jogador"),
+                type: z.nativeEnum(TeamPlayerType).describe("Posição do jogador (Starter, Substitute, etc.)")
+            })).optional().describe("Lista de jogadores ativos e suas posições"),
+            error: z.string().optional().describe("Mensagem de erro se a busca falhar"),
         }),
     },
-    async (_input) => {
-        logger.info("[Tool:getFuriaRoster] Iniciada busca por elenco da FURIA.");
+    async (input: z.infer<typeof furiaRosterToolInputSchema>) => {
+        logger.info("[getFuriaRosterTool] Ferramenta chamada.");
         try {
             const team = await HLTV.getTeam({ id: 8297 });
-            if (!team?.players?.length) {
-                return { error: "Não foi possível encontrar jogadores para a FURIA na HLTV." };
+
+            if (!team) {
+                logger.warn("[getFuriaRosterTool] Objeto 'team' não retornado pelo HLTV para ID 8297.");
+                return { error: "Não foi possível obter dados da equipe FURIA no HLTV." };
             }
+
             const players = team.players
-                .map((p: any) => ({ name: p.name, type: p.type as TeamPlayerType }))
-                .filter(p => p.name && p.type);
-            return { players };
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-            return { error: `Erro ao buscar elenco: ${msg}` };
-        }
-    }
-);
+                ?.map(p => ({
+                    name: p.name || 'Nome Indisponível',
+                    type: Object.values(TeamPlayerType).includes(p.type as TeamPlayerType) ? p.type as TeamPlayerType : TeamPlayerType.Starter
+                }))
+                .filter(p => p.name !== 'Nome Indisponível') || [];
 
-// --- Tool: Próximos Jogos da FURIA ---
-const getFuriaUpcomingMatchesInputSchema = z.object({
-    count: z.number().int().positive().optional().default(5),
-});
-const getFuriaUpcomingMatchesTool = ai.defineTool(
-    {
-        name: "getFuriaUpcomingMatches",
-        description: "Busca os próximos jogos agendados para a FURIA CS2 na HLTV.",
-        inputSchema: getFuriaUpcomingMatchesInputSchema,
-        outputSchema: z.object({
-            matches: z
-                .array(
-                    z.object({
-                        id: z.number().optional(),
-                        date: z.number().optional().describe("Timestamp Unix em ms."),
-                        event: z.string().optional(),
-                        team1: z.string().optional(),
-                        team2: z.string().optional(),
-                    })
-                )
-                .optional(),
-            error: z.string().optional(),
-        }),
-    },
-    async (input) => {
-        logger.info(`[Tool:getFuriaUpcomingMatches] Buscando ${input.count} jogos.`);
-        try {
-            const matches = await HLTV.getMatches({ teamIds: [8297] });
-            const upcoming = matches
-                .filter(m => typeof m.date === 'number' && m.date! > Date.now())
-                .slice(0, input.count)
-                .map(m => ({ id: m.id, date: m.date, event: m.event?.name, team1: m.team1?.name, team2: m.team2?.name }));
-            return { matches: upcoming };
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-            return { error: `Erro ao buscar próximos jogos: ${msg}` };
-        }
-    }
-);
+            // Lógica do Coach REMOVIDA (const coachName = team.coach?.name;)
 
-// --- Tool: Resultados Recentes da FURIA ---
-const getFuriaRecentResultsInputSchema = z.object({
-    count: z.number().int().positive().optional().default(5),
-});
-const getFuriaRecentResultsTool = ai.defineTool(
-    {
-        name: "getFuriaRecentResults",
-        description: "Busca os últimos resultados de jogos da FURIA CS2 na HLTV.",
-        inputSchema: getFuriaRecentResultsInputSchema,
-        outputSchema: z.object({
-            results: z
-                .array(
-                    z.object({
-                        id: z.number().optional(),
-                        date: z.number().optional(),
-                        team1: z.string().optional(),
-                        team2: z.string().optional(),
-                        result: z.string().optional(),
-                    })
-                )
-                .optional(),
-            error: z.string().optional(),
-        }),
-    },
-    async (input) => {
-        logger.info(`[Tool:getFuriaRecentResults] Buscando ${input.count} resultados.`);
-        try {
-            const res = await HLTV.getResults({ teamIds: [8297] });
-            const results = res.slice(0, input.count).map(r => {
-                let score = 'N/A';
-                if (r.result?.team1 != null && r.result?.team2 != null) {
-                    score = `${r.result.team1}-${r.result.team2}`;
-                } else if ((r.result as any)?.outcome) {
-                    score = (r.result as any).outcome;
-                }
-                return { id: r.id, date: r.date, team1: r.team1?.name, team2: r.team2?.name, result: score };
-            });
-            return { results };
+            if (players.length === 0) { // Verifica apenas se há jogadores
+                logger.warn("[getFuriaRosterTool] Nenhum jogador válido encontrado para a FURIA.");
+                return { error: "Não foram encontrados jogadores válidos para a FURIA no HLTV no momento." };
+            }
+
+            logger.info(`[getFuriaRosterTool] Jogadores: ${players.map(p => `${p.name} (${p.type})`).join(', ')}`);
+            // Retorno CORRIGIDO: Apenas jogadores
+            return { players: players };
+
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-            return { error: `Erro ao buscar resultados: ${msg}` };
+            logger.error("[getFuriaRosterTool] Erro ao buscar dados no HLTV:", err);
+            const message = err instanceof Error ? err.message : "Erro desconhecido";
+            return { error: `Ocorreu um erro ao tentar buscar os dados no HLTV: ${message}` };
         }
     }
 );
 
 // --- Tool: Pesquisa na Wikipedia ---
 const wikipediaInputSchema = z.object({ searchTerm: z.string() });
-const searchWikipediaTool = ai.defineTool(
+const searchWikipediaTool = ai.defineTool( // Usando ai.defineTool
     {
         name: "searchWikipedia",
-        description: "Resumo de tópico em Português na Wikipedia.",
+        description: "Busca um resumo sobre um tópico específico na Wikipedia em Português.",
         inputSchema: wikipediaInputSchema,
-        outputSchema: z.object({ summary: z.string().optional(), url: z.string().optional(), error: z.string().optional() }),
+        outputSchema: z.object({
+            summary: z.string().optional().describe("Resumo do artigo encontrado"),
+            url: z.string().url().optional().describe("URL completa do artigo na Wikipedia"),
+            error: z.string().optional().describe("Mensagem de erro se a busca falhar")
+        }),
     },
-    async ({ searchTerm }) => {
+    async (input: z.infer<typeof wikipediaInputSchema>) => {
+        const { searchTerm } = input;
         logger.info(`[Tool:searchWikipedia] Buscando '${searchTerm}'.`);
         try {
-            await wiki.setLang('pt');
+            wiki.setLang('pt');
             const page: Page | null = await wiki.page(searchTerm);
             if (!page) {
+                logger.warn(`[Tool:searchWikipedia] Página '${searchTerm}' não encontrada.`);
                 return { error: `Página '${searchTerm}' não encontrada.` };
             }
             const summary = await page.summary();
+            logger.info(`[Tool:searchWikipedia] Resumo encontrado para '${searchTerm}'.`);
             return { summary: summary.extract, url: page.fullurl };
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-            return { error: `Erro na Wikipedia: ${msg}` };
+            logger.error(`[Tool:searchWikipedia] Erro ao buscar na Wikipedia: ${err}`);
+            const message = err instanceof Error ? err.message : "Erro desconhecido";
+            return { error: `Erro na Wikipedia: ${message}` };
         }
     }
 );
 
-// --- Flow Principal ---
+
+// --- Flow Principal do Chat (Correções na obtenção da resposta) ---
 export const furiaChatFlow = ai.defineFlow(
-    { name: "furiaChatFlow", inputSchema: z.string(), outputSchema: z.string() },
+    {name: "furiaChatFlow", inputSchema: z.string(), outputSchema: z.string()},
     async (userMessage: string) => {
         logger.info(`[Flow] Mensagem Recebida: "${userMessage}"`);
-        const systemInstruction = `Você é um assistente...`;
+        const systemInstruction = `Você é um assistente especialista focado exclusivamente na equipe de CS2 da FURIA Esports. Responda apenas a perguntas sobre este time.
+**IMPORTANTE: Se for perguntado sobre a escalação atual, jogadores ou elenco da FURIA CS2, SEMPRE use a ferramenta 'getFuriaRoster' para obter a informação mais recente do HLTV.org antes de responder.** Liste os jogadores claramente se a ferramenta retornar sucesso.
+Se a ferramenta retornar um erro, informe ao usuário que não foi possível buscar os dados atualizados no momento.
+Para perguntas gerais sobre a história da FURIA, jogadores específicos (como Fallen, KSCERATO) ou conceitos de CS, você pode usar seu conhecimento ou a ferramenta 'searchWikipedia'.
+Se a pergunta for sobre próximos jogos ou resultados recentes, informe que essa funcionalidade ainda não está implementada.
+Se a pergunta for sobre qualquer outro assunto não relacionado à FURIA ou CS (outro time, outro jogo, F1, etc.), recuse educadamente informando sua especialidade exclusiva na FURIA CS2.`;
+
         try {
             const resp = await ai.generate({
-                model: gemini20Flash,
+                model: 'gemini-2.0-flash', // Usa o ID do modelo como string
                 messages: [
                     { role: 'system', content: [{ text: systemInstruction }] },
-                    { role: 'user', content: [{ text: userMessage }] },
+                    { role: 'user', content: [{ text: userMessage }] }
                 ],
-                tools: [getFuriaRosterTool, getFuriaUpcomingMatchesTool, getFuriaRecentResultsTool, searchWikipediaTool],
-                config: { temperature: 0.3 },
+                tools: [getFuriaRosterTool, searchWikipediaTool],
+                config: {
+                    temperature: 0.3
+                }
             });
-            return resp.text?.trim() || 'Não consegui gerar resposta.';
+
+            // ***** OBTENÇÃO DA RESPOSTA CORRIGIDA *****
+            const botReply = resp.text ?? 'Não consegui gerar resposta.'; // Acessa .text diretamente
+
+            logger.info(`[furiaChatFlow] Resposta gerada: "${botReply}"`);
+            return botReply;
         } catch (err) {
             logger.error("[Flow] Erro Crítico:", err);
             return `Desculpe, erro interno: ${(err as Error).message}`;
@@ -215,42 +166,63 @@ export const furiaChatFlow = ai.defineFlow(
     }
 );
 
-// --- Express + JSON Parsing ---
+// --- Configuração do Servidor Express ---
 const app = express();
 app.use(express.json());
 
-// Rota de chat
-app.post('/chat', async (req, res): Promise<void> => {
+// --- Rota de Chat USA O FLOW (Correção no return) ---
+// Removido ': Promise<void>' para evitar conflito com return implícito do Express
+app.post("/chat", async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage?.trim()) {
-        res.status(400).json({ reply: 'Mensagem inválida.' });
-        return;
+        // CORRIGIDO: Removido 'return'
+        res.status(400).json({reply: "Mensagem inválida."});
+        return; // Use return aqui para parar a execução APÓS enviar a resposta
     }
     try {
-        const output = await furiaChatFlow.run(userMessage);
-        res.json({ reply: output });
+        logger.info(`[Rota /chat] Chamando furiaChatFlow com: "${userMessage}"`);
+        const flowResult = await furiaChatFlow.run(userMessage);
+
+        logger.info(`[Rota /chat] Flow completed. Tipo: ${typeof flowResult}, Valor Raw: ${JSON.stringify(flowResult)}`);
+
+        let responsePayload = "Erro: Resposta não encontrada no resultado do flow.";
+
+        if (typeof flowResult === 'object' && flowResult !== null && typeof (flowResult as any).result === 'string') {
+            responsePayload = (flowResult as any).result;
+        } else if (typeof flowResult === 'string') {
+            responsePayload = flowResult;
+        }
+        else {
+            logger.warn(`[Rota /chat] Estrutura de resultado inesperada do flow: ${JSON.stringify(flowResult)}`);
+        }
+
+        logger.info(`[Rota /chat] Enviando payload: "${responsePayload}"`);
+        // CORRIGIDO: Removido 'return'
+        res.json({ reply: responsePayload });
+
     } catch (err) {
         logger.error("Erro em /chat:", err);
-        res.status(500).json({ reply: 'Erro interno.' });
+        const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro interno desconhecido.";
+        // CORRIGIDO: Removido 'return'
+        res.status(500).json({ reply: `Erro interno ao processar sua mensagem. Detalhe: ${errorMessage}` });
     }
 });
 
-// --- CORS Handler e Exportação da Cloud Function ---
+// --- CORS Handler ---
 const corsHandler = cors({
-    origin: ['http://127.0.0.1:5000', 'http://localhost:5000'],
-    methods: ['POST','OPTIONS'],
-    allowedHeaders: ['Content-Type'],
+    origin: ["http://127.0.0.1:5000", "http://localhost:5000"],
+    methods: ["POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
     credentials: true,
 });
 
+// --- Exportar a API como uma Cloud Function HTTP v2 ---
 export const api = functions.https.onRequest((req, res) => {
     corsHandler(req, res, () => {
-        if (req.method === 'OPTIONS') {
-            // Responde preflight CORS
-            res.status(204).send('');
+        if (req.method === "OPTIONS") {
+            res.status(204).send("");
         } else {
-            // Encaminha para o Express
-            app(req, res);
+            app(req, res); // Encaminha para o Express
         }
     });
 });
