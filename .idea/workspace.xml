@@ -8,14 +8,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/functions/.eslintignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/.eslintrc.js" beforeDir="false" afterPath="$PROJECT_DIR$/functions/.eslintrc.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/lib/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/functions/lib/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/lib/index.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/functions/lib/index.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -142,7 +135,7 @@
       <workItem from="1745717345170" duration="11806000" />
       <workItem from="1745776185857" duration="3362000" />
       <workItem from="1745864893853" duration="8319000" />
-      <workItem from="1746041097368" duration="8430000" />
+      <workItem from="1746041097368" duration="12001000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -176,7 +169,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745980032951</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Add ESLint ignore file, update .gitignore, and refactor index.js for Telegram bot integration&#10;&#10;- Created .eslintignore to exclude genkit.config.ts from linting.&#10;- Updated .gitignore to include additional patterns for environment files and IDE configurations.&#10;- Refactored index.js to improve Telegram bot integration, including error handling and logging enhancements.&#10;- Adjusted dotenv configuration for better environment variable management.">
+      <option name="closed" value="true" />
+      <created>1746074241224</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1746074241224</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -208,7 +209,8 @@
     <MESSAGE value="Update Firebase and TypeScript configurations, add dotenv dependency, and enhance chat interface" />
     <MESSAGE value="Update `index.js.map` source mapping&#10;&#10;This change modifies the mapping configuration in `index.js.map` to align with updated source paths and mapping settings. It ensures accurate source mapping for troubleshooting and debugging." />
     <MESSAGE value="Update source map in index.js.map&#10;&#10;The source map file for index.js has been modified to reflect changes in mappings, sources, and related metadata. These updates ensure alignment with the current state of the source code, improving debugging accuracy." />
-    <option name="LAST_COMMIT_MESSAGE" value="Update source map in index.js.map&#10;&#10;The source map file for index.js has been modified to reflect changes in mappings, sources, and related metadata. These updates ensure alignment with the current state of the source code, improving debugging accuracy." />
+    <MESSAGE value="Add ESLint ignore file, update .gitignore, and refactor index.js for Telegram bot integration&#10;&#10;- Created .eslintignore to exclude genkit.config.ts from linting.&#10;- Updated .gitignore to include additional patterns for environment files and IDE configurations.&#10;- Refactored index.js to improve Telegram bot integration, including error handling and logging enhancements.&#10;- Adjusted dotenv configuration for better environment variable management." />
+    <option name="LAST_COMMIT_MESSAGE" value="Add ESLint ignore file, update .gitignore, and refactor index.js for Telegram bot integration&#10;&#10;- Created .eslintignore to exclude genkit.config.ts from linting.&#10;- Updated .gitignore to include additional patterns for environment files and IDE configurations.&#10;- Refactored index.js to improve Telegram bot integration, including error handling and logging enhancements.&#10;- Adjusted dotenv configuration for better environment variable management." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
