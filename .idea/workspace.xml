@@ -8,10 +8,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/functions/.eslintignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/.eslintrc.js" beforeDir="false" afterPath="$PROJECT_DIR$/functions/.eslintrc.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/lib/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/functions/lib/index.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/lib/index.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/functions/lib/index.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -73,31 +77,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "code.cleanup.on.save": "true",
-    "com.codeium.enabled": "true",
-    "git-widget-placeholder": "master",
-    "ignore.virus.scanning.warn.message": "true",
-    "javascript.nodejs.core.library.configured.version": "23.11.0",
-    "javascript.nodejs.core.library.typings.version": "22.15.2",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "C:/furia-chat-challenge/functions",
-    "list.type.of.created.stylesheet": "CSS",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "advanced.settings",
-    "ts.external.directory.path": "C:\\furia-chat-challenge\\functions\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;code.cleanup.on.save&quot;: &quot;true&quot;,
+    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;javascript.nodejs.core.library.configured.version&quot;: &quot;23.11.0&quot;,
+    &quot;javascript.nodejs.core.library.typings.version&quot;: &quot;22.15.2&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/furia-chat-challenge/functions&quot;,
+    &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;advanced.settings&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\furia-chat-challenge\\functions\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="QodanaCloudProjectLink">
     <option name="lastReportId" value="jkKlJ" />
     <option name="linkedProjectId" value="Rv9EE" />
@@ -137,7 +141,8 @@
       <workItem from="1745604592327" duration="31851000" />
       <workItem from="1745717345170" duration="11806000" />
       <workItem from="1745776185857" duration="3362000" />
-      <workItem from="1745864893853" duration="7114000" />
+      <workItem from="1745864893853" duration="8319000" />
+      <workItem from="1746041097368" duration="8430000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -163,7 +168,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745765747590</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Update source map in index.js.map&#10;&#10;The source map file for index.js has been modified to reflect changes in mappings, sources, and related metadata. These updates ensure alignment with the current state of the source code, improving debugging accuracy.">
+      <option name="closed" value="true" />
+      <created>1745980032951</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1745980032951</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -193,7 +206,9 @@
     <MESSAGE value="Remove .gitignore and add Qodana SARIF report.&#10;&#10;Deleted the `.gitignore` file for the `functions/` folder, which included rules for dependencies, logs, and build output. Added a `qodana.sarif.json` file containing a detailed report of code quality analysis." />
     <MESSAGE value="Remove .gitignore from functions and add Qodana SARIF file&#10;&#10;The `.gitignore` file specific to the `functions` folder has been deleted. A new `qodana.sarif.json` file has been added, likely containing Qodana analysis results. Verify changes related to build processes and code quality configurations." />
     <MESSAGE value="Update Firebase and TypeScript configurations, add dotenv dependency, and enhance chat interface" />
-    <option name="LAST_COMMIT_MESSAGE" value="" />
+    <MESSAGE value="Update `index.js.map` source mapping&#10;&#10;This change modifies the mapping configuration in `index.js.map` to align with updated source paths and mapping settings. It ensures accurate source mapping for troubleshooting and debugging." />
+    <MESSAGE value="Update source map in index.js.map&#10;&#10;The source map file for index.js has been modified to reflect changes in mappings, sources, and related metadata. These updates ensure alignment with the current state of the source code, improving debugging accuracy." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update source map in index.js.map&#10;&#10;The source map file for index.js has been modified to reflect changes in mappings, sources, and related metadata. These updates ensure alignment with the current state of the source code, improving debugging accuracy." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>

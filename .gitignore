@@ -87,6 +87,8 @@ storage_export/ # Optional: If you export emulator data locally
 functions/.env
 functions/.env.*
 functions/*.env
+# Uncomment this if you want to ignore all .env files in the project
+# .env*
 
 # === Operating System Files ===
 # macOS
@@ -98,6 +100,9 @@ functions/*.env
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+# Windows image file caches
+*.ahk
+*.ini
 
 # Linux
 *~
@@ -107,6 +112,8 @@ Desktop.ini
 .idea/
 *.sublime-project
 *.sublime-workspace
+*.code-workspace
+
 
 # === Other ===
 # Optional: Genkit or other tool caches (if they appear outside node_modules)

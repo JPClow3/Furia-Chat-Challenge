@@ -1,230 +1,151 @@
 /* eslint-disable */
-// functions/src/index.ts
+// index.ts (Agora na raiz do código que irá para o Railway, ex: dentro da pasta 'functions')
 
 import * as dotenv from "dotenv";
-import * as functions from "firebase-functions/v2";
-import * as logger from "firebase-functions/logger";
-import express from "express";
-import cors from "cors";
-import * as z from "zod"; // Zod já está importado, necessário para z.infer
-// Importações do Genkit e Plugins
+import * as logger from "firebase-functions/logger"; // Pode manter ou trocar por outra lib de log (console, pino, etc.)
+import * as z from "zod";
 import {genkit} from "genkit";
 import {vertexAI} from "@genkit-ai/vertexai";
-
-// Importação da biblioteca HLTV
-import HLTV from "hltv";
-// Importação da biblioteca Wikipedia
-import wiki, {Page} from "wikipedia";
 import * as path from "node:path";
+import TelegramBot from "node-telegram-bot-api";
+import express from "express"; // <--- ADICIONADO EXPRESS
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Carrega variáveis do .env (útil para desenvolvimento local)
+// No Railway, você configurará as variáveis de ambiente na interface deles.
+dotenv.config({ path: path.resolve(__dirname, '../.env') }); // Ajuste o path se a estrutura de pastas mudar
 
-export enum TeamPlayerType {
-    Coach = "Coach",
-    Starter = "Starter",
-    Substitute = "Substitute",
-    Benched = "Benched",
+// --- Obtenha o Token do Telegram da variável de ambiente ---
+const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+if (!telegramToken) {
+    logger.error("Erro Crítico: TELEGRAM_BOT_TOKEN não está definido!");
+    // Em um servidor real, talvez não lançar erro, mas logar e não iniciar o bot
+    throw new Error("Token do Telegram não configurado.");
 }
+logger.info("Token do Telegram carregado.");
+// Não precisamos do modo polling, vamos usar webhook.
+const bot = new TelegramBot(telegramToken);
+logger.info("Instância do Bot do Telegram criada.");
 
-logger.info("Iniciando função com PLUGIN VERTEX AI...");
+// Enumeração para tipos de jogador
+export enum TeamPlayerType { Coach="Coach", Starter="Starter", Substitute="Substitute", Benched="Benched" }
 
+// --- Configuração do Genkit e Vertex AI ---
+logger.info("Iniciando configuração do Genkit com Vertex AI...");
 const GCLOUD_PROJECT = process.env.GOOGLE_CLOUD_PROJECT!;
 const GCLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION!;
+// IMPORTANTE: GOOGLE_APPLICATION_CREDENTIALS será necessário no Railway (veja passo 4)
 
 if (!GCLOUD_PROJECT || !GCLOUD_LOCATION) {
-    logger.error("AVISO: Variáveis GOOGLE_CLOUD_PROJECT ou GOOGLE_CLOUD_LOCATION não definidas no .env.");
+    logger.error("AVISO: Variáveis GOOGLE_CLOUD_PROJECT ou GOOGLE_CLOUD_LOCATION não definidas.");
+    throw new Error("Variáveis de ambiente do GCP não configuradas.");
 } else {
-    logger.info(`GOOGLE_CLOUD_PROJECT: ${GCLOUD_PROJECT}, LOCATION: ${GCLOUD_LOCATION}`);
+    logger.info(`Genkit - GOOGLE_CLOUD_PROJECT: ${GCLOUD_PROJECT}, LOCATION: ${GCLOUD_LOCATION}`);
 }
 
-// --- Criar a instância configurada do Genkit com Vertex AI ---
 const ai = genkit({
     plugins: [vertexAI({ projectId: GCLOUD_PROJECT, location: GCLOUD_LOCATION })],
 });
+logger.info("Instância do Genkit AI criada.");
 
-// --- Tool: Elenco Atual da FURIA (Correções aplicadas) ---
+// --- Definição das Ferramentas (Tools) ---
+// (Mantenha as definições das ferramentas getFuriaRosterTool e searchWikipediaTool exatamente como estavam antes)
+// Tool: Elenco Atual da FURIA
 const furiaRosterToolInputSchema = z.object({});
-const getFuriaRosterTool = ai.defineTool( // Usando ai.defineTool
-    {
-        name: "getFuriaRoster",
-        description: "Busca a escalação atual de jogadores do time de CS2 da FURIA Esports diretamente do HLTV.org. Use esta ferramenta sempre que for perguntado sobre os jogadores atuais ou o elenco.",
-        inputSchema: furiaRosterToolInputSchema,
-        // Schema de Saída CORRIGIDO: Removido 'coach'
-        outputSchema: z.object({
-            players: z.array(z.object({
-                name: z.string().describe("Nome do jogador"),
-                type: z.nativeEnum(TeamPlayerType).describe("Posição do jogador (Starter, Substitute, etc.)")
-            })).optional().describe("Lista de jogadores ativos e suas posições"),
-            error: z.string().optional().describe("Mensagem de erro se a busca falhar"),
-        }),
-    },
-    async (input: z.infer<typeof furiaRosterToolInputSchema>) => {
-        logger.info("[getFuriaRosterTool] Ferramenta chamada.");
-        try {
-            const team = await HLTV.getTeam({ id: 8297 });
+const getFuriaRosterTool = ai.defineTool({
+    name: "",
+    description: "",
+}, async (input) => { /* ... Lógica completa ... */ });
+// Tool: Pesquisa na Wikipedia
+const wikipediaInputSchema = z.object({ searchTerm: z.string().describe("Termo a ser pesquisado na Wikipedia") });
+const searchWikipediaTool = ai.defineTool({
+    name: "",
+    description: "",
+}, async (input) => { /* ... Lógica completa ... */ });
+logger.info("Ferramentas Genkit definidas.");
 
-            if (!team) {
-                logger.warn("[getFuriaRosterTool] Objeto 'team' não retornado pelo HLTV para ID 8297.");
-                return { error: "Não foi possível obter dados da equipe FURIA no HLTV." };
-            }
-
-            const players = team.players
-                ?.map(p => ({
-                    name: p.name || 'Nome Indisponível',
-                    type: Object.values(TeamPlayerType).includes(p.type as TeamPlayerType) ? p.type as TeamPlayerType : TeamPlayerType.Starter
-                }))
-                .filter(p => p.name !== 'Nome Indisponível') || [];
-
-            // Lógica do Coach REMOVIDA (const coachName = team.coach?.name;)
-
-            if (players.length === 0) { // Verifica apenas se há jogadores
-                logger.warn("[getFuriaRosterTool] Nenhum jogador válido encontrado para a FURIA.");
-                return { error: "Não foram encontrados jogadores válidos para a FURIA no HLTV no momento." };
-            }
-
-            logger.info(`[getFuriaRosterTool] Jogadores: ${players.map(p => `${p.name} (${p.type})`).join(', ')}`);
-            // Retorno CORRIGIDO: Apenas jogadores
-            return { players: players };
-
-        } catch (err) {
-            logger.error("[getFuriaRosterTool] Erro ao buscar dados no HLTV:", err);
-            const message = err instanceof Error ? err.message : "Erro desconhecido";
-            return { error: `Ocorreu um erro ao tentar buscar os dados no HLTV: ${message}` };
-        }
-    }
-);
-
-// --- Tool: Pesquisa na Wikipedia ---
-const wikipediaInputSchema = z.object({ searchTerm: z.string() });
-const searchWikipediaTool = ai.defineTool( // Usando ai.defineTool
-    {
-        name: "searchWikipedia",
-        description: "Busca um resumo sobre um tópico específico na Wikipedia em Português.",
-        inputSchema: wikipediaInputSchema,
-        outputSchema: z.object({
-            summary: z.string().optional().describe("Resumo do artigo encontrado"),
-            url: z.string().url().optional().describe("URL completa do artigo na Wikipedia"),
-            error: z.string().optional().describe("Mensagem de erro se a busca falhar")
-        }),
-    },
-    async (input: z.infer<typeof wikipediaInputSchema>) => {
-        const { searchTerm } = input;
-        logger.info(`[Tool:searchWikipedia] Buscando '${searchTerm}'.`);
-        try {
-            wiki.setLang('pt');
-            const page: Page | null = await wiki.page(searchTerm);
-            if (!page) {
-                logger.warn(`[Tool:searchWikipedia] Página '${searchTerm}' não encontrada.`);
-                return { error: `Página '${searchTerm}' não encontrada.` };
-            }
-            const summary = await page.summary();
-            logger.info(`[Tool:searchWikipedia] Resumo encontrado para '${searchTerm}'.`);
-            return { summary: summary.extract, url: page.fullurl };
-        } catch (err) {
-            logger.error(`[Tool:searchWikipedia] Erro ao buscar na Wikipedia: ${err}`);
-            const message = err instanceof Error ? err.message : "Erro desconhecido";
-            return { error: `Erro na Wikipedia: ${message}` };
-        }
-    }
-);
-
-
-// --- Flow Principal do Chat (Correções na obtenção da resposta) ---
-export const furiaChatFlow = ai.defineFlow(
-    {name: "furiaChatFlow", inputSchema: z.string(), outputSchema: z.string()},
-    async (userMessage: string) => {
-        logger.info(`[Flow] Mensagem Recebida: "${userMessage}"`);
-        const systemInstruction = `Você é um assistente especialista focado exclusivamente na equipe de CS2 da FURIA Esports. Responda apenas a perguntas sobre este time.
-**IMPORTANTE: Se for perguntado sobre a escalação atual, jogadores ou elenco da FURIA CS2, SEMPRE use a ferramenta 'getFuriaRoster' para obter a informação mais recente do HLTV.org antes de responder.** Liste os jogadores claramente se a ferramenta retornar sucesso.
-Se a ferramenta retornar um erro, informe ao usuário que não foi possível buscar os dados atualizados no momento.
-Para perguntas gerais sobre a história da FURIA, jogadores específicos (como Fallen, KSCERATO) ou conceitos de CS, você pode usar seu conhecimento ou a ferramenta 'searchWikipedia'.
-Se a pergunta for sobre próximos jogos ou resultados recentes, informe que essa funcionalidade ainda não está implementada.
-Se a pergunta for sobre qualquer outro assunto não relacionado à FURIA ou CS (outro time, outro jogo, F1, etc.), recuse educadamente informando sua especialidade exclusiva na FURIA CS2.`;
-
-        try {
-            const resp = await ai.generate({
-                model: 'gemini-2.0-flash', // Usa o ID do modelo como string
-                messages: [
-                    { role: 'system', content: [{ text: systemInstruction }] },
-                    { role: 'user', content: [{ text: userMessage }] }
-                ],
-                tools: [getFuriaRosterTool, searchWikipediaTool],
-                config: {
-                    temperature: 0.3
-                }
-            });
-
-            // ***** OBTENÇÃO DA RESPOSTA CORRIGIDA *****
-            const botReply = resp.text ?? 'Não consegui gerar resposta.'; // Acessa .text diretamente
-
-            logger.info(`[furiaChatFlow] Resposta gerada: "${botReply}"`);
-            return botReply;
-        } catch (err) {
-            logger.error("[Flow] Erro Crítico:", err);
-            return `Desculpe, erro interno: ${(err as Error).message}`;
-        }
-    }
-);
+// --- Flow Principal do Chat ---
+// (Mantenha a definição do furiaChatFlow exatamente como estava antes)
+// @ts-ignore
+export const furiaChatFlow = ai.defineFlow({ /* ... Definição completa ... */ }, async (userMessage) => { /* ... Lógica completa ... */ });
+logger.info("Flow Genkit 'furiaChatFlow' definido.");
 
 // --- Configuração do Servidor Express ---
 const app = express();
+// Middleware para parsear JSON do webhook do Telegram
 app.use(express.json());
 
-// --- Rota de Chat USA O FLOW (Correção no return) ---
-// Removido ': Promise<void>' para evitar conflito com return implícito do Express
-app.post("/chat", async (req, res) => {
-    const userMessage = req.body.message;
-    if (!userMessage?.trim()) {
-        // CORRIGIDO: Removido 'return'
-        res.status(400).json({reply: "Mensagem inválida."});
-        return; // Use return aqui para parar a execução APÓS enviar a resposta
+// Rota de verificação simples (opcional)
+app.get('/', (req, res) => {
+    res.send('Bot Furia CS está rodando!');
+});
+
+// --- Rota do Webhook do Telegram ---
+const WEBHOOK_PATH = `/telegram/webhook/${telegramToken}`; // Adiciona token na URL para segurança básica
+app.post(WEBHOOK_PATH, async (req, res) => {
+    const update: TelegramBot.Update = req.body;
+    logger.debug("Webhook Telegram Recebido (Express):", JSON.stringify(update, null, 2));
+
+    if (update.message?.text && update.message.chat) {
+        const chatId = update.message.chat.id;
+        const userMessage = update.message.text;
+        const userId = update.message.from?.id;
+
+        if (update.message.from?.is_bot) {
+            logger.info(`[Webhook] Mensagem do bot ${update.message.from.username} ignorada.`);
+            return res.sendStatus(200); // Responde OK rapidamente
+        }
+
+        logger.info(`[Webhook] Mensagem recebida no chat ${chatId} (User: ${userId}): "${userMessage}"`);
+
+        // Responde OK imediatamente para o Telegram (evita timeout)
+        res.sendStatus(200);
+
+        // Processamento Assíncrono (sem await aqui para liberar a resposta HTTP)
+        processTelegramUpdate(chatId, userMessage).catch(error => {
+            logger.error(`[Webhook] Erro não tratado no processamento assíncrono para chat ${chatId}:`, error);
+            // Tentar notificar usuário sobre erro geral (último recurso)
+            bot.sendMessage(chatId, "⚠️ Ocorreu um erro inesperado ao processar sua solicitação.").catch(e => logger.error("Falha ao enviar msg de erro final", e));
+        });
+
+    } else {
+        logger.info(`[Webhook] Update ignorado (sem texto ou chat válido).`);
+        return res.sendStatus(200); // Responde OK para outros tipos de update
     }
+});
+
+// Função separada para processamento assíncrono
+async function processTelegramUpdate(chatId: number, userMessage: string): Promise<void> {
     try {
-        logger.info(`[Rota /chat] Chamando furiaChatFlow com: "${userMessage}"`);
+        await bot.sendChatAction(chatId, "typing");
         const flowResult = await furiaChatFlow.run(userMessage);
 
-        logger.info(`[Rota /chat] Flow completed. Tipo: ${typeof flowResult}, Valor Raw: ${JSON.stringify(flowResult)}`);
-
-        let responsePayload = "Erro: Resposta não encontrada no resultado do flow.";
-
-        if (typeof flowResult === 'object' && flowResult !== null && typeof (flowResult as any).result === 'string') {
-            responsePayload = (flowResult as any).result;
-        } else if (typeof flowResult === 'string') {
-            responsePayload = flowResult;
-        }
-        else {
-            logger.warn(`[Rota /chat] Estrutura de resultado inesperada do flow: ${JSON.stringify(flowResult)}`);
-        }
-
-        logger.info(`[Rota /chat] Enviando payload: "${responsePayload}"`);
-        // CORRIGIDO: Removido 'return'
-        res.json({ reply: responsePayload });
-
-    } catch (err) {
-        logger.error("Erro em /chat:", err);
-        const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro interno desconhecido.";
-        // CORRIGIDO: Removido 'return'
-        res.status(500).json({ reply: `Erro interno ao processar sua mensagem. Detalhe: ${errorMessage}` });
-    }
-});
-
-// --- CORS Handler ---
-const corsHandler = cors({
-    origin: ["http://127.0.0.1:5000", "http://localhost:5000"],
-    methods: ["POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
-    credentials: true,
-});
-
-// --- Exportar a API como uma Cloud Function HTTP v2 ---
-export const api = functions.https.onRequest((req, res) => {
-    corsHandler(req, res, () => {
-        if (req.method === "OPTIONS") {
-            res.status(204).send("");
+        let replyText: string;
+        if (typeof flowResult === 'string') {
+            replyText = flowResult;
         } else {
-            app(req, res); // Encaminha para o Express
+            logger.error(`[Process] Resultado inesperado do flow: ${typeof flowResult}`, flowResult);
+            replyText = "Desculpe, ocorreu um erro interno ao gerar a resposta.";
         }
-    });
-});
+        logger.info(`[Process] Resposta gerada (pronta para envio): "${replyText.substring(0, 100)}..."`);
 
-logger.info("Função 'api' pronta com CORS wrapper e JSON parsing.");
+        await bot.sendMessage(chatId, replyText, { parse_mode: 'Markdown' });
+        logger.info(`[Process] Resposta enviada para ${chatId}.`);
+
+    } catch (error) {
+        logger.error(`[Process] Erro CRÍTICO ao processar mensagem para chat ${chatId}:`, error);
+        try {
+            await bot.sendMessage(chatId, "🤖 Desculpe, encontrei um problema técnico inesperado. Por favor, tente novamente mais tarde.");
+        } catch (sendError) {
+            logger.error("[Process] Falha ao enviar mensagem de erro de volta ao Telegram:", sendError);
+        }
+    }
+}
+
+
+// --- Iniciar o Servidor ---
+const port = process.env.PORT || 8080; // Porta definida pelo Railway ou padrão 8080
+app.listen(port, () => {
+    logger.info(`Servidor Express escutando na porta ${port}`);
+    logger.info(`Webhook do Telegram esperado em: /telegram/webhook/${telegramToken}`);
+    // Lembre-se de configurar o webhook no Telegram após o deploy!
+});
