@@ -75,7 +75,7 @@ const getFuriaRosterTool = ai.defineTool(
           error: z.string().optional().describe("Mensagem de erro se a busca falhar"),
       }),
   },
-  async (input: z.infer<typeof furiaRosterToolInputSchema>) => {
+  async () => {
       logger.info("[Tool:getFuriaRoster] Ferramenta chamada.");
       try {
           const team = await HLTV.getTeam({ id: 8297 }); // ID da FURIA
@@ -121,7 +121,7 @@ const searchWikipediaTool = ai.defineTool(
       const { searchTerm } = input;
       logger.info(`[Tool:searchWikipedia] Buscando '${searchTerm}'.`);
       try {
-          await wiki.setLang('pt');
+          wiki.setLang('pt');
           const page: Page | null = await wiki.page(searchTerm);
           if (!page) {
               logger.warn(`[Tool:searchWikipedia] Página '${searchTerm}' não encontrada.`);
@@ -187,7 +187,7 @@ const app = express();
 app.use(express.json());
 
 // Rota de verificação simples (opcional, para teste)
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     res.status(200).send('Servidor do Bot Furia CS está ativo!');
 });
 
@@ -199,37 +199,34 @@ logger.info(`Configurando rota POST para o webhook em: ${WEBHOOK_PATH}`);
 
 app.post(WEBHOOK_PATH, async (req, res) => {
     const update: TelegramBot.Update = req.body;
-    // Usar logger.debug para logs muito verbosos, se necessário
-    // logger.debug("Webhook Telegram Recebido (Express):", JSON.stringify(update, null, 2));
+    logger.debug("Webhook Telegram Recebido (Express):", JSON.stringify(update, null, 2));
 
     if (update.message?.text && update.message.chat) {
         const chatId = update.message.chat.id;
         const userMessage = update.message.text;
         const userId = update.message.from?.id;
 
-        // Ignora mensagens vindas de outros bots
         if (update.message.from?.is_bot) {
-            logger.info(`[Webhook] Mensagem do bot ${update.message.from.username} (ID: ${userId}) ignorada.`);
-            return res.sendStatus(200); // Responde OK para o Telegram
+            logger.info(`[Webhook] Mensagem do bot ${update.message.from.username} ignorada.`);
+            return res.sendStatus(200); // Retorna explicitamente
         }
 
         logger.info(`[Webhook] Mensagem recebida no chat ${chatId} (User: ${userId}): "${userMessage}"`);
+        res.sendStatus(200); // Envia resposta OK imediatamente
 
-        // Responde OK imediatamente para o Telegram (boa prática para webhooks)
-        res.sendStatus(200);
-
-        // Processa a mensagem em segundo plano (não bloqueia a resposta ao Telegram)
+        // Processamento Assíncrono
         processTelegramUpdate(chatId, userMessage).catch(error => {
             logger.error(`[Webhook] Erro não tratado no processamento assíncrono para chat ${chatId}:`, error);
-            // Tenta notificar o usuário sobre erro geral (melhor esforço)
-            bot.sendMessage(chatId, "⚠️ Ocorreu um erro inesperado. A equipe já foi notificada.").catch(e => logger.error("Falha ao enviar msg de erro final", e));
+            bot.sendMessage(chatId, "⚠️ Ocorreu um erro inesperado ao processar sua solicitação.").catch(e => logger.error("Falha ao enviar msg de erro final", e));
         });
 
+        return; // <--- ADICIONAR ESTE RETURN AQUI
+
     } else {
-        // Ignora updates que não são mensagens de texto novas
-        logger.info(`[Webhook] Update ignorado (sem texto ou chat válido): Tipo ${update.edited_message ? 'edited_message' : 'outro'}`);
-        return res.sendStatus(200); // Responde OK para o Telegram
+        logger.info(`[Webhook] Update ignorado (sem texto ou chat válido).`);
+        return res.sendStatus(200); // Retorna explicitamente
     }
+    // Não precisamos de um return aqui fora, pois o if/else cobre todos os casos.
 });
 
 // Função separada para processar a mensagem e enviar a resposta
@@ -245,13 +242,9 @@ async function processTelegramUpdate(chatId: number, userMessage: string): Promi
 
         // Garante que temos uma string para enviar
         let replyText: string;
-        if (typeof flowResult === 'string') {
-            replyText = flowResult;
-        } else {
-            // Isso não deveria acontecer se o outputSchema do flow for z.string()
-            logger.error(`[Process] Resultado inesperado do flow (não é string): ${typeof flowResult}`, flowResult);
-            replyText = "Desculpe, ocorreu um erro interno (formato de resposta inesperado).";
-        }
+         // Isso não deveria acontecer se o outputSchema do flow for z.string()
+        logger.error(`[Process] Resultado inesperado do flow (não é string): ${typeof flowResult}`, flowResult);
+        replyText = "Desculpe, ocorreu um erro interno (formato de resposta inesperado).";
         logger.info(`[Process] Resposta gerada (pronta para envio): "${replyText.substring(0, 100)}..."`);
 
         // Envia a resposta ao usuário
