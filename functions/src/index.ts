@@ -14,21 +14,24 @@ import * as path from "node:path";
 import TelegramBot from "node-telegram-bot-api";
 import express from "express"; // Importa o Express
 
+// Adicione estas linhas para debug das variáveis de ambiente:
+console.log('--- DEBUG ENV VARS ---');
+console.log('process.env.TELEGRAM_BOT_TOKEN exists:', !!process.env.TELEGRAM_BOT_TOKEN); // Não logue o token em si!
+console.log('process.env.GOOGLE_CLOUD_PROJECT:', process.env.GOOGLE_CLOUD_PROJECT);
+console.log('process.env.GOOGLE_CLOUD_LOCATION:', process.env.GOOGLE_CLOUD_LOCATION);
+console.log('process.env.GOOGLE_APPLICATION_CREDENTIALS exists:', !!process.env.GOOGLE_APPLICATION_CREDENTIALS);
+console.log('--- END DEBUG ---');
+
 // Carrega variáveis do .env (útil para desenvolvimento local)
-// No Railway, configure as variáveis de ambiente na interface deles.
-// O path pode precisar de ajuste dependendo da estrutura final no repo/build.
-dotenv.config({ path: path.resolve(__dirname, '../.env') }); // Se .env estiver um nível acima de 'lib'
+dotenv.config({ path: path.resolve(__dirname, '../.env') }); // Ajuste o path se necessário
 
 // --- Obtenha o Token do Telegram da variável de ambiente ---
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
 if (!telegramToken) {
     logger.error("Erro Crítico: TELEGRAM_BOT_TOKEN não está definido nas variáveis de ambiente!");
-    // Em um servidor real, para evitar crash, logue e talvez não inicie o bot
-    // ou lance o erro para impedir o start se o token for essencial.
     throw new Error("Token do Telegram não configurado.");
 }
 logger.info("Token do Telegram carregado com sucesso.");
-// Instancia o bot. Não usamos 'polling' com webhooks.
 const bot = new TelegramBot(telegramToken);
 logger.info("Instância do Bot do Telegram criada.");
 
@@ -44,7 +47,6 @@ export enum TeamPlayerType {
 logger.info("Iniciando configuração do Genkit com Vertex AI...");
 const GCLOUD_PROJECT = process.env.GOOGLE_CLOUD_PROJECT!;
 const GCLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION!;
-// Lembrete: GOOGLE_APPLICATION_CREDENTIALS precisa estar configurado no Railway!
 
 if (!GCLOUD_PROJECT || !GCLOUD_LOCATION) {
     logger.error("Erro Crítico: Variáveis GOOGLE_CLOUD_PROJECT ou GOOGLE_CLOUD_LOCATION não definidas.");
@@ -62,6 +64,7 @@ logger.info("Instância do Genkit AI criada com plugin Vertex AI.");
 
 // Tool: Elenco Atual da FURIA
 const furiaRosterToolInputSchema = z.object({});
+// Correção técnica na assinatura da função async (adicionado input, embora não usado aqui)
 const getFuriaRosterTool = ai.defineTool(
   {
       name: "getFuriaRoster",
@@ -75,10 +78,10 @@ const getFuriaRosterTool = ai.defineTool(
           error: z.string().optional().describe("Mensagem de erro se a busca falhar"),
       }),
   },
-  async () => {
+  async (input: z.infer<typeof furiaRosterToolInputSchema>) => { // Parâmetro 'input' adicionado para consistência
       logger.info("[Tool:getFuriaRoster] Ferramenta chamada.");
       try {
-          const team = await HLTV.getTeam({ id: 8297 }); // ID da FURIA
+          const team = await HLTV.getTeam({ id: 8297 });
           if (!team) {
               logger.warn("[Tool:getFuriaRoster] Objeto 'team' não retornado pelo HLTV para ID 8297.");
               return { error: "Não foi possível obter dados da equipe FURIA no HLTV." };
@@ -174,12 +177,12 @@ Se a pergunta for sobre qualquer outro assunto não relacionado à FURIA ou CS (
       } catch (err) {
           logger.error("[Flow:furiaChatFlow] Erro Crítico durante a geração:", err);
           const errorMessage = err instanceof Error ? err.message : "Erro desconhecido no fluxo";
+          // Retorna a mensagem de erro para ser tratada e enviada ao usuário
           return `Desculpe, ocorreu um erro interno ao processar sua solicitação. Detalhe: ${errorMessage}`;
       }
   }
 );
 logger.info("Flow Genkit 'furiaChatFlow' definido.");
-
 
 // --- Configuração do Servidor Express ---
 const app = express();
@@ -192,8 +195,6 @@ app.get('/', (_req, res) => {
 });
 
 // --- Rota do Webhook do Telegram ---
-// Usamos o token na URL como uma forma simples de "segurança" para garantir que só o Telegram chame.
-// Em produção real, considere usar o `secret_token` do Telegram.
 const WEBHOOK_PATH = `/telegram/webhook/${telegramToken}`;
 logger.info(`Configurando rota POST para o webhook em: ${WEBHOOK_PATH}`);
 
@@ -208,11 +209,11 @@ app.post(WEBHOOK_PATH, async (req, res) => {
 
         if (update.message.from?.is_bot) {
             logger.info(`[Webhook] Mensagem do bot ${update.message.from.username} ignorada.`);
-            return res.sendStatus(200); // Retorna explicitamente
+            return res.sendStatus(200);
         }
 
         logger.info(`[Webhook] Mensagem recebida no chat ${chatId} (User: ${userId}): "${userMessage}"`);
-        res.sendStatus(200); // Envia resposta OK imediatamente
+        res.sendStatus(200); // Responde OK imediatamente para o Telegram
 
         // Processamento Assíncrono
         processTelegramUpdate(chatId, userMessage).catch(error => {
@@ -220,13 +221,13 @@ app.post(WEBHOOK_PATH, async (req, res) => {
             bot.sendMessage(chatId, "⚠️ Ocorreu um erro inesperado ao processar sua solicitação.").catch(e => logger.error("Falha ao enviar msg de erro final", e));
         });
 
-        return; // <--- ADICIONAR ESTE RETURN AQUI
+        // Adiciona o return aqui para satisfazer o 'noImplicitReturns' do TypeScript
+        return;
 
     } else {
         logger.info(`[Webhook] Update ignorado (sem texto ou chat válido).`);
-        return res.sendStatus(200); // Retorna explicitamente
+        return res.sendStatus(200);
     }
-    // Não precisamos de um return aqui fora, pois o if/else cobre todos os casos.
 });
 
 // Função separada para processar a mensagem e enviar a resposta
@@ -242,9 +243,12 @@ async function processTelegramUpdate(chatId: number, userMessage: string): Promi
 
         // Garante que temos uma string para enviar
         let replyText: string;
+        // ***** CORREÇÃO APLICADA AQUI *****
          // Isso não deveria acontecer se o outputSchema do flow for z.string()
         logger.error(`[Process] Resultado inesperado do flow (não é string): ${typeof flowResult}`, flowResult);
         replyText = "Desculpe, ocorreu um erro interno (formato de resposta inesperado).";
+        // ***** FIM DA CORREÇÃO *****
+
         logger.info(`[Process] Resposta gerada (pronta para envio): "${replyText.substring(0, 100)}..."`);
 
         // Envia a resposta ao usuário
@@ -263,13 +267,10 @@ async function processTelegramUpdate(chatId: number, userMessage: string): Promi
     }
 }
 
-
 // --- Iniciar o Servidor Express ---
-// O Railway fornecerá a porta através da variável de ambiente PORT.
-const port = process.env.PORT || 8080; // Porta padrão 8080 se PORT não for definido
+const port = process.env.PORT || 8080; // Porta definida pelo Railway ou padrão 8080
 app.listen(port, () => {
     logger.info(`Servidor Express iniciado e escutando na porta ${port}`);
     logger.info(`Webhook do Telegram configurado para ser esperado em: ${WEBHOOK_PATH}`);
     // Lembre-se de configurar o webhook no Telegram usando a URL pública do Railway + WEBHOOK_PATH!
-    // Ex: https://seu-app.up.railway.app/telegram/webhook/<SEU_TOKEN>
 });

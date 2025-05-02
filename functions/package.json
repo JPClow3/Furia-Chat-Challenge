@@ -6,27 +6,18 @@
     "node": "22"
   },
   "scripts": {
-    "build": "tsc && ls -la lib",
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "serve": "npm run build && firebase emulators:start --only hosting,functions",
     "start": "node lib/index.js",
-    "lint": "eslint --ext .js,.ts .",
-    "shell": "npm run build && firebase functions:shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "lint": "eslint src --ext .ts"
   },
   "dependencies": {
     "@genkit-ai/core": "^1.7.0",
-    "@genkit-ai/firebase": "^1.7.0",
     "@genkit-ai/flow": "^0.5.17",
     "@genkit-ai/vertexai": "^1.7.0",
     "@google-cloud/aiplatform": "^4.1.0",
-    "@types/cors": "^2.8.17",
-    "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "firebase-admin": "^12.6.0",
     "genkit": "^1.7.0",
     "hltv": "^3.5.0",
     "node-telegram-bot-api": "^0.66.0",
@@ -41,7 +32,6 @@
     "eslint": "^8.9.0",
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-import": "^2.25.4",
-    "firebase-functions-test": "^3.1.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
   }

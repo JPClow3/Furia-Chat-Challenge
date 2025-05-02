@@ -137,7 +137,7 @@
       <workItem from="1745776185857" duration="3362000" />
       <workItem from="1745864893853" duration="8319000" />
       <workItem from="1746041097368" duration="12709000" />
-      <workItem from="1746116453505" duration="2130000" />
+      <workItem from="1746116453505" duration="6483000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -195,7 +195,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746116688685</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Remove unused frontend files and refine backend logic&#10;&#10;Deleted redundant frontend assets, including `index.html`, `script.js`, `styles.css`, and others, to streamline the project. Improved back-end code by adjusting async behavior, refining webhook handling, and enhancing error logging and response handling. Updated `package.json` with new build scripts for improved development workflow.">
+      <option name="closed" value="true" />
+      <created>1746125539694</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1746125539694</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -232,7 +240,9 @@
     <MESSAGE value="Refactor index.ts to integrate Express and improve tooling.&#10;&#10;Implemented an Express server to handle Telegram webhooks and replaced polling with webhooks for better performance. Enhanced the Genkit setup with Vertex AI plugins and defined new tools for working with HLTV and Wikipedia APIs." />
     <MESSAGE value="Update workspace.xml to include new public assets and adjust task configurations" />
     <MESSAGE value="Remove frontend files for FURIA CS chatbot.&#10;&#10;Deleted `index.html`, `script.js`, `styles.css`, and associated assets as they are no longer needed. This simplifies the project by removing unused frontend components." />
-    <option name="LAST_COMMIT_MESSAGE" value="Remove frontend files for FURIA CS chatbot.&#10;&#10;Deleted `index.html`, `script.js`, `styles.css`, and associated assets as they are no longer needed. This simplifies the project by removing unused frontend components." />
+    <MESSAGE value="Refactor Express webhook handler and update project files&#10;&#10;Simplified the Express webhook handler by improving response flow and logging clarity. Added a frontend cleanup task to workspace.xml and removed unused frontend files. Updated package.json to fix script duplication in the &quot;build&quot; command." />
+    <MESSAGE value="Remove unused frontend files and refine backend logic&#10;&#10;Deleted redundant frontend assets, including `index.html`, `script.js`, `styles.css`, and others, to streamline the project. Improved back-end code by adjusting async behavior, refining webhook handling, and enhancing error logging and response handling. Updated `package.json` with new build scripts for improved development workflow." />
+    <option name="LAST_COMMIT_MESSAGE" value="Remove unused frontend files and refine backend logic&#10;&#10;Deleted redundant frontend assets, including `index.html`, `script.js`, `styles.css`, and others, to streamline the project. Improved back-end code by adjusting async behavior, refining webhook handling, and enhancing error logging and response handling. Updated `package.json` with new build scripts for improved development workflow." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
