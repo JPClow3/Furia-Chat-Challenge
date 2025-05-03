@@ -1,15 +1,15 @@
 /* eslint-disable */
 // index.ts
-// Tentativa 11.1: Melhorar mensagem de erro Cloudflare
+// Tentativa 13: Fallback para Liquipedia MediaWiki API se HLTV falhar
 
 import * as dotenv from "dotenv";
 import express from "express";
-import type {ZodIssue} from "zod"; // Use type import
+import type {ZodIssue} from "zod";
 import * as z from "zod";
+
 // --- Imports Genkit ---
 import {genkit, GenkitError, MessageData} from "genkit";
 import {gemini15Flash, googleAI} from "@genkit-ai/googleai";
-// Import defineFlow AND runFlow from @genkit-ai/flow
 import {defineFlow, runFlow} from "@genkit-ai/flow";
 
 // --- Imports das Ferramentas e Outros ---
@@ -18,11 +18,14 @@ import wiki from "wikipedia";
 import * as path from "node:path";
 import TelegramBot from "node-telegram-bot-api";
 import Redis from "ioredis";
+import axios from "axios";
+import * as cheerio from "cheerio";
 
 // --- Carregamento de Variáveis de Ambiente ---
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 console.log('--- DEBUG ENV VARS ---');
-// ... console logs ...
+// Adicione um console.log para a chave Gemini aqui se precisar depurar
+// console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Presente' : 'AUSENTE');
 console.log('--- END DEBUG ---');
 
 // --- Configuração do Cliente Redis ---
@@ -39,6 +42,7 @@ if (redisUrl) {
 
 // --- Configuração do Bot Telegram ---
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+const contactInfo = process.env.CONTACT_EMAIL || 'responsible-dev@example.com'; // Use uma variável de ambiente ou um email real
 if (!telegramToken) { console.error("Erro: TELEGRAM_BOT_TOKEN não definido!"); throw new Error("Token Telegram não configurado."); }
 console.info("Token Telegram OK.");
 const bot = new TelegramBot(telegramToken);
@@ -48,7 +52,7 @@ console.info("Instância Bot Telegram OK.");
 // --- Inicialização do Genkit ---
 console.info("Inicializando Genkit com plugin googleAI...");
 const ai = genkit({
-    plugins: [ googleAI() ],
+    plugins: [ googleAI() ], // Certifique-se que GEMINI_API_KEY está no ambiente
 });
 console.info("Instância Genkit 'ai' criada.");
 
@@ -57,104 +61,224 @@ console.info("Instância Genkit 'ai' criada.");
 
 export enum TeamPlayerType { Coach = "Coach", Starter = "Starter", Substitute = "Substitute", Benched = "Benched" }
 
-// Schema para cache (inclui source)
-const furiaRosterCacheSchema = z.object({
+// Schema para cache (inclui fonte)
+const rosterCacheSchema = z.object({
     playersInfo: z.string().optional(),
     error: z.string().optional(),
-    source: z.literal('cache').or(z.literal('api')).optional(),
+    source: z.enum(['hltv', 'liquipedia', 'cache-hltv', 'cache-liquipedia']).optional(),
 });
 
-// Schema para output da ferramenta (não inclui source)
+// Schema para output da ferramenta (interface para o LLM)
 const furiaRosterOutputSchema = z.object({
-    playersInfo: z.string().optional().describe("String formatada com nome e tipo dos jogadores."),
-    error: z.string().optional(),
+    playersInfo: z.string().optional().describe("String formatada com nome e tipo dos jogadores (ou apenas nomes se tipo não disponível)."),
+    error: z.string().optional().describe("Mensagem de erro se a busca falhar em todas as fontes."),
+    source: z.enum(['HLTV', 'Liquipedia']).optional().describe("Fonte da informação (HLTV ou Liquipedia)."),
 });
 
-// Função de execução HLTV com cache e melhor msg de erro
+// Função de execução com fallback para Liquipedia MediaWiki API
 async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutputSchema>> {
-    console.info("[Tool Exec] getFuriaRoster chamada.");
-    const cacheKey = "hltv:furia_roster";
+    console.info("[Tool Exec] getFuriaRoster chamada (HLTV com fallback Liquipedia API).");
+    const hltvCacheKey = "hltv:furia_roster_v2"; // Incrementa versão se mudar lógica/schema
+    const liquipediaCacheKey = "liquipedia:furia_roster_v2";
+    const LIQUIPEDIA_API_URL = 'https://liquipedia.net/counterstrike/api.php';
+    const LIQUIPEDIA_PAGE_NAME = 'FURIA_Esports';
+    const CUSTOM_USER_AGENT = `FuriaChatChallengeBot/1.0 (${contactInfo})`; // User-Agent customizado
     const CACHE_TTL_SUCCESS = 14400; // 4 hours
     const CACHE_TTL_ERROR = 3600;    // 1 hour
 
-    // 1. Check Cache
+    // --- 1. Tentar HLTV (Cache ou API) ---
+    let hltvResult: z.infer<typeof rosterCacheSchema> | null = null;
+    let isCloudflareBlock = false;
+
+    // 1a. Checar Cache HLTV
     if (redis) {
         try {
-            const cachedData = await redis.get(cacheKey);
+            const cachedData = await redis.get(hltvCacheKey);
             if (cachedData) {
-                const parsedCache = JSON.parse(cachedData);
-                const validation = furiaRosterCacheSchema.safeParse(parsedCache);
-                if (validation.success) {
-                    console.info(`[Cache] hit ${cacheKey}`);
-                    // Return the structure expected by the tool definition
-                    return { playersInfo: validation.data.playersInfo, error: validation.data.error };
-                } else {
-                    console.warn(`[Cache] Invalid data for ${cacheKey}, fetching again.`);
+                const parsedCache = rosterCacheSchema.parse(JSON.parse(cachedData));
+                if (parsedCache && !parsedCache.error) {
+                    console.info(`[Cache HLTV] hit ${hltvCacheKey}`);
+                    return { playersInfo: parsedCache.playersInfo, source: 'HLTV' };
+                } else if (parsedCache?.error) {
+                    console.warn(`[Cache HLTV] hit com erro ${hltvCacheKey}: ${parsedCache.error}`);
+                    if (parsedCache.error.includes('Cloudflare') || parsedCache.error.includes('Access denied') || parsedCache.error.includes('bloqueio')) {
+                        isCloudflareBlock = true;
+                    }
                 }
-            } else {
-                console.info(`[Cache] miss ${cacheKey}`);
-            }
-        } catch (e) {
-            console.error(`[Cache] erro read ${cacheKey}`, e);
-        }
+            } else { console.info(`[Cache HLTV] miss ${hltvCacheKey}`); }
+        } catch (e) { console.error(`[Cache HLTV] erro read ${hltvCacheKey}`, e); }
     }
 
-    // 2. Call API if cache miss or invalid
-    let apiResult: z.infer<typeof furiaRosterOutputSchema>;
-    try {
-        const team = await HLTV.getTeam({ id: 8297 });
-        if (!team || !team.players || team.players.length === 0) {
-            apiResult = { error: "Dados da equipe FURIA ou jogadores não encontrados no HLTV." };
-        } else {
+    // 1b. Tentar API HLTV (Apenas se cache miss ou erro não-CF cacheado)
+    if (!isCloudflareBlock) {
+        console.info("[HLTV API] Tentando buscar dados...");
+        try {
+            const team = await HLTV.getTeam({ id: 8297 }); // ID da FURIA
+            if (!team?.players?.length) throw new Error("Dados/jogadores não encontrados no HLTV.");
+
             const players = team.players
               .map(p => ({ name: p.name || 'N/A', type: Object.values(TeamPlayerType).includes(p.type as TeamPlayerType) ? p.type as TeamPlayerType : TeamPlayerType.Starter }))
               .filter(p => p.name !== 'N/A');
-            if (players.length === 0) {
-                apiResult = { error: "Nenhum jogador válido encontrado para FURIA." };
-            } else {
-                console.info(`[Tool Exec] Jogadores HLTV: ${players.map(p => p.name).join(', ')}`);
-                apiResult = { playersInfo: players.map(p => `${p.name} (${p.type})`).join(', ') };
+            if (players.length === 0) throw new Error("Nenhum jogador válido encontrado no HLTV.");
+
+            const playersInfo = players.map(p => `${p.name} (${p.type})`).join(', ');
+            console.info(`[HLTV API] Sucesso: ${playersInfo}`);
+            hltvResult = { playersInfo: playersInfo, source: 'hltv' };
+            if (redis) { // Cache Success
+                try { await redis.set(hltvCacheKey, JSON.stringify(hltvResult), 'EX', CACHE_TTL_SUCCESS); }
+                catch (e) { console.error(`[Cache HLTV] erro save success ${hltvCacheKey}`, e); }
             }
+            return { playersInfo: hltvResult.playersInfo, source: 'HLTV' };
+
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            console.error("[HLTV API] Erro:", errorMsg);
+            isCloudflareBlock = errorMsg.includes('Cloudflare') || errorMsg.includes('Access denied');
+            const errorToCache = `Falha ao buscar no HLTV: ${isCloudflareBlock ? 'Bloqueio Cloudflare detectado.' : errorMsg}`;
+            hltvResult = { error: errorToCache, source: 'hltv' };
+            if (redis) { // Cache Error
+                try { await redis.set(hltvCacheKey, JSON.stringify(hltvResult), 'EX', CACHE_TTL_ERROR); }
+                catch (e) { console.error(`[Cache HLTV] erro save error ${hltvCacheKey}`, e); }
+            }
+            if (!isCloudflareBlock) {
+                return { error: hltvResult.error }; // Retorna erro não-CF
+            }
+            // Se for Cloudflare block, continua para o fallback
         }
-    } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        console.error("[Tool Exec] getFuriaRoster Erro API:", errorMsg);
-        // *** IMPROVED ERROR MESSAGE HANDLING ***
-        if (errorMsg.includes('Cloudflare') || errorMsg.includes('Access denied')) {
-            apiResult = { error: `Não consegui acessar os dados do HLTV no momento (possível bloqueio Cloudflare). Tente novamente mais tarde.` };
-        } else {
-            apiResult = { error: `Erro ao buscar no HLTV: ${errorMsg}` };
-        }
-        // **************************************
+    } else {
+        console.warn("[HLTV] Bloqueio Cloudflare detectado (do cache ou tentativa anterior), pulando para Liquipedia.");
     }
 
-    // 3. Write to Cache
+    // --- 2. Tentar Liquipedia API como Fallback ---
+    console.info("[Liquipedia Fallback] Tentando buscar na API MediaWiki...");
+    let liquipediaResult: z.infer<typeof rosterCacheSchema> | null = null;
+
+    // 2a. Checar Cache Liquipedia
     if (redis) {
         try {
-            const ttl = apiResult.error ? CACHE_TTL_ERROR : CACHE_TTL_SUCCESS;
-            const dataToCache: z.infer<typeof furiaRosterCacheSchema> = { ...apiResult, source: 'api' };
-            await redis.set(cacheKey, JSON.stringify(dataToCache), 'EX', ttl);
-            console.info(`[Cache] saved ${cacheKey} (ttl: ${ttl})`);
-        } catch (e) {
-            console.error(`[Cache] erro save ${cacheKey}`, e);
-        }
+            const cachedData = await redis.get(liquipediaCacheKey);
+            if (cachedData) {
+                const parsedCache = rosterCacheSchema.parse(JSON.parse(cachedData));
+                if (parsedCache && !parsedCache.error) {
+                    console.info(`[Cache Liquipedia] hit ${liquipediaCacheKey}`);
+                    return { playersInfo: parsedCache.playersInfo, source: 'Liquipedia' };
+                } else if (parsedCache?.error) {
+                    console.warn(`[Cache Liquipedia] hit com erro ${liquipediaCacheKey}. Tentando buscar novamente.`);
+                }
+            } else { console.info(`[Cache Liquipedia] miss ${liquipediaCacheKey}`); }
+        } catch (e) { console.error(`[Cache Liquipedia] erro read ${liquipediaCacheKey}`, e); }
     }
 
-    // 4. Return API result (original schema)
-    return apiResult;
+    // 2b. Chamar API MediaWiki da Liquipedia
+    try {
+        console.info(`[Liquipedia API] Buscando action=parse para ${LIQUIPEDIA_PAGE_NAME}...`);
+        const response = await axios.get(LIQUIPEDIA_API_URL, {
+            params: {
+                action: 'parse',
+                page: LIQUIPEDIA_PAGE_NAME,
+                prop: 'text', // Queremos o HTML do conteúdo
+                format: 'json',
+                disabletoc: true, // Não precisamos do índice
+                // section: 2, // Opcional: Tentar pegar só a seção do time se o índice for estável (requer teste)
+            },
+            headers: {
+                'User-Agent': CUSTOM_USER_AGENT, // Exigido pelos Termos de Uso
+                'Accept-Encoding': 'gzip', // Exigido pelos Termos de Uso
+            },
+            timeout: 20000 // Timeout maior para API parse
+        });
+
+        if (response.data?.error) {
+            throw new Error(`API Liquipedia retornou erro: ${response.data.error.info}`);
+        }
+
+        const htmlContent = response.data?.parse?.text?.['*'];
+        if (!htmlContent) {
+            throw new Error("Conteúdo HTML não encontrado na resposta da API Liquipedia.");
+        }
+
+        const $ = cheerio.load(htmlContent);
+        const players: string[] = [];
+
+        // --- !!! SELETOR CRÍTICO PARA O HTML DA API !!! ---
+        // Tenta encontrar a tabela do time ativo DENTRO DO HTML RETORNADO PELA API
+        const activeSquadHeading = $('#Active_Squad'); // Procura H2 com ID 'Active_Squad'
+        let rosterTable = activeSquadHeading.parent().nextAll('table.wikitable').first();
+
+        if (rosterTable.length === 0) {
+            console.warn("Seletor pós H2 falhou na API, tentando por div.roster-card...");
+            // O HTML da API pode não ter divs .roster-card, buscar tabelas wikitable diretamente
+            rosterTable = $('table.wikitable').filter((_i, el) => {
+                // Heurística: verificar se a primeira linha (cabeçalho) contém 'ID' ou 'Player'
+                const thText = $(el).find('thead tr th').first().text().trim().toLowerCase();
+                return thText === 'id' || thText === 'player';
+            }).first();
+        }
+
+        if (rosterTable.length > 0) {
+            console.info("Tabela do elenco encontrada na resposta da API Liquipedia, extraindo jogadores...");
+            rosterTable.find('tbody tr').each((_i, row) => {
+                const playerCell = $(row).find('td').first(); // Primeira célula
+                const playerLink = playerCell.find('a').first(); // Link dentro da célula
+                let playerName = playerLink.attr('title') || playerCell.text().trim(); // Prefere o title do link
+
+                if (playerName && !playerName.includes('(page does not exist)')) {
+                    // Remover possíveis qualificadores extras como "(Captain)" se existirem
+                    playerName = playerName.replace(/\s*\(.*?\)\s*$/, '').trim();
+                    if (playerName) { // Checa se sobrou nome após remover qualificadores
+                        players.push(playerName);
+                    }
+                }
+            });
+        } else {
+            console.warn("Não foi possível encontrar a tabela do elenco na resposta da API Liquipedia com os seletores.");
+        }
+        // --- !!! FIM DO SELETOR CRÍTICO !!! ---
+
+        if (players.length > 0) {
+            const playersInfo = players.join(', ');
+            console.info("[Liquipedia API] Sucesso:", playersInfo);
+            liquipediaResult = { playersInfo: playersInfo, source: 'liquipedia' };
+        } else {
+            throw new Error("Não foi possível extrair jogadores da Liquipedia (verificar seletores ou estrutura da página na API).");
+        }
+
+    } catch (scrapeErr) {
+        const errorMsg = scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr);
+        console.error("[Liquipedia API] Erro:", errorMsg);
+        liquipediaResult = { error: `Falha ao buscar/processar API Liquipedia: ${errorMsg}`, source: 'liquipedia' };
+    }
+
+    // 2c. Cache Liquipedia Result
+    if (redis && liquipediaResult) {
+        try {
+            const ttl = liquipediaResult.error ? CACHE_TTL_ERROR : CACHE_TTL_SUCCESS;
+            await redis.set(liquipediaCacheKey, JSON.stringify(liquipediaResult), 'EX', ttl);
+            console.info(`[Cache Liquipedia] saved ${liquipediaCacheKey} (ttl: ${ttl})`);
+        } catch (e) { console.error(`[Cache Liquipedia] erro save ${liquipediaCacheKey}`, e); }
+    }
+
+    // 3. Retornar resultado da Liquipedia (sucesso ou erro)
+    if (liquipediaResult && !liquipediaResult.error) {
+        return { playersInfo: liquipediaResult.playersInfo, source: 'Liquipedia' };
+    } else {
+        // Se AMBOS falharam (HLTV por Cloudflare, Liquipedia por erro)
+        return { error: `Falha ao obter dados do HLTV (Bloqueio Cloudflare) e da Liquipedia (${liquipediaResult?.error || 'Erro desconhecido'}). Tente novamente mais tarde.` };
+    }
 }
-// Define the tool using the ai instance
+// Atualiza a descrição da ferramenta
 const getFuriaRosterTool = ai.defineTool(
   {
       name: "getFuriaRoster",
-      description: "Busca a escalação ATUAL de jogadores da FURIA CS2 no HLTV.org.",
+      description: "Busca a escalação ATUAL de jogadores da FURIA CS2. Tenta HLTV.org primeiro, e usa a API da Liquipedia como fallback se HLTV estiver inacessível.",
       inputSchema: z.object({}),
-      outputSchema: furiaRosterOutputSchema, // Tool output doesn't include 'source'
+      outputSchema: furiaRosterOutputSchema,
   },
   executeGetFuriaRoster
 );
 
-// --- Wikipedia Tool (remains the same) ---
+
+// --- Wikipedia Tool (sem alterações) ---
 const wikipediaSearchSchema = z.object({ searchTerm: z.string().describe("Termo a pesquisar") });
 const wikipediaOutputSchema = z.object({
     summary: z.string().optional().describe("Resumo do artigo."),
@@ -235,21 +359,20 @@ const searchWikipediaTool = ai.defineTool(
       name: "searchWikipedia",
       description: "Busca um resumo sobre um tópico na Wikipedia em Português.",
       inputSchema: wikipediaSearchSchema,
-      outputSchema: wikipediaOutputSchema, // Wikipedia function returns source, so schema matches
+      outputSchema: wikipediaOutputSchema,
   },
   executeSearchWikipedia
 );
 
-console.info("Ferramentas Genkit definidas: getFuriaRoster, searchWikipedia");
+console.info("Ferramentas Genkit definidas: getFuriaRoster (com fallback API), searchWikipedia");
 
 
-// --- Definição do Flow Principal do Chat ---
+// --- Definição do Flow Principal do Chat (sem alterações) ---
 const flowInputSchema = z.object({
     userMessage: z.string(),
     chatHistory: z.array(z.any()).optional().default([]),
 });
 
-// Let TypeScript infer the flow type
 const furiaChatFlow = defineFlow(
   {
       name: "furiaChatFlow",
@@ -329,7 +452,7 @@ const furiaChatFlow = defineFlow(
 
                   let executor: Function | undefined;
                   let requiresInput = false;
-                  let toolDefinition: any = undefined; // Using 'any' for simplicity
+                  let toolDefinition: any = undefined;
 
                   if (toolName === getFuriaRosterTool.name) {
                       executor = executeGetFuriaRoster;
@@ -397,7 +520,7 @@ const furiaChatFlow = defineFlow(
 console.info("Flow Genkit 'furiaChatFlow' definido com lógica de ferramentas.");
 
 
-// --- Configuração do Servidor Express ---
+// --- Configuração do Servidor Express (sem alterações) ---
 const app = express();
 app.use(express.json());
 
@@ -405,7 +528,7 @@ app.get('/', (_req, res) => {
     res.status(200).send('Servidor Bot Furia CS (Render/Redis/Genkit+googleAI) Ativo!');
 });
 
-// --- Rota do Webhook Telegram ---
+// --- Rota do Webhook Telegram (sem alterações) ---
 const WEBHOOK_PATH = `/telegram/webhook/${telegramToken}`;
 console.info(`Configurando POST para webhook em: ${WEBHOOK_PATH}`);
 
@@ -449,7 +572,7 @@ app.post(WEBHOOK_PATH, async (req, res) => {
         try {
             await bot.sendChatAction(chatId, "typing");
 
-            // Use runFlow from @genkit-ai/flow
+            // Use runFlow
             const flowResult = await runFlow(furiaChatFlow, {
                 userMessage: userMessage,
                 chatHistory: historyForFlow
@@ -457,7 +580,7 @@ app.post(WEBHOOK_PATH, async (req, res) => {
 
             console.info(`[Webhook] Flow result raw: ${JSON.stringify(flowResult)}`);
 
-            const finalReply = true ? flowResult : "Desculpe, não obtive uma resposta clara do assistente.";
+            const finalReply = typeof flowResult === 'string' ? flowResult : "Desculpe, não obtive uma resposta clara do assistente.";
 
             const lastUser: MessageData = { role: 'user', content: [{ text: userMessage }] };
             const lastModel: MessageData = { role: 'model', content: [{ text: finalReply }] };
@@ -497,7 +620,7 @@ app.post(WEBHOOK_PATH, async (req, res) => {
 });
 
 
-// --- Iniciar Servidor Express ---
+// --- Iniciar Servidor Express (sem alterações) ---
 const port = process.env.PORT || 8080;
 const host = '0.0.0.0';
 const numericPort = Number(port);
@@ -505,11 +628,11 @@ const numericPort = Number(port);
 if (isNaN(numericPort)) { console.error(`Porta inválida: ${port}.`); process.exit(1); }
 
 const server = app.listen(numericPort, host, () => {
-    console.info(`Servidor Express escutando em http://${host}:${numericPort}`); // Log http for Render detection
+    console.info(`Servidor Express escutando em https://${host}:${numericPort}`);
     console.info(`Webhook Telegram esperado em: ${WEBHOOK_PATH}`);
 });
 
-// --- Encerramento Gracioso ---
+// --- Encerramento Gracioso (sem alterações) ---
 const gracefulShutdown = (signal: string) => {
     console.info(`${signal} signal received: closing server...`);
     server.close(() => {
