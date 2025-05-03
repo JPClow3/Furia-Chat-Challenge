@@ -9,7 +9,11 @@
   <component name="ChangeListManager">
     <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/lib/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/lib/index.js.map" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/package-lock.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/src/genkit-sample.ts.bak" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -71,31 +75,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;code.cleanup.on.save&quot;: &quot;true&quot;,
-    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;javascript.nodejs.core.library.configured.version&quot;: &quot;23.11.0&quot;,
-    &quot;javascript.nodejs.core.library.typings.version&quot;: &quot;22.15.2&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/furia-chat-challenge/functions&quot;,
-    &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;advanced.settings&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;C:\\furia-chat-challenge\\functions\\node_modules\\typescript\\lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "code.cleanup.on.save": "true",
+    "com.codeium.enabled": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "javascript.nodejs.core.library.configured.version": "23.11.0",
+    "javascript.nodejs.core.library.typings.version": "22.15.2",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "C:/furia-chat-challenge/functions",
+    "list.type.of.created.stylesheet": "CSS",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "advanced.settings",
+    "ts.external.directory.path": "C:\\furia-chat-challenge\\functions\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="QodanaCloudProjectLink">
     <option name="lastReportId" value="jkKlJ" />
     <option name="linkedProjectId" value="Rv9EE" />
@@ -137,7 +141,8 @@
       <workItem from="1745776185857" duration="3362000" />
       <workItem from="1745864893853" duration="8319000" />
       <workItem from="1746041097368" duration="12709000" />
-      <workItem from="1746116453505" duration="6483000" />
+      <workItem from="1746116453505" duration="6522000" />
+      <workItem from="1746151650911" duration="15002000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -203,7 +208,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746125539694</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Refactor backend and streamline project setup&#10;&#10;Improved Express webhook handling, added environment variable debugging, and refined error management. Updated `functions/package.json` to clean up scripts and dependencies, removing unused items. Adjusted various files to enhance code consistency, simplify logic, and align with best practices.">
+      <option name="closed" value="true" />
+      <created>1746151612926</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1746151612926</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -242,7 +255,8 @@
     <MESSAGE value="Remove frontend files for FURIA CS chatbot.&#10;&#10;Deleted `index.html`, `script.js`, `styles.css`, and associated assets as they are no longer needed. This simplifies the project by removing unused frontend components." />
     <MESSAGE value="Refactor Express webhook handler and update project files&#10;&#10;Simplified the Express webhook handler by improving response flow and logging clarity. Added a frontend cleanup task to workspace.xml and removed unused frontend files. Updated package.json to fix script duplication in the &quot;build&quot; command." />
     <MESSAGE value="Remove unused frontend files and refine backend logic&#10;&#10;Deleted redundant frontend assets, including `index.html`, `script.js`, `styles.css`, and others, to streamline the project. Improved back-end code by adjusting async behavior, refining webhook handling, and enhancing error logging and response handling. Updated `package.json` with new build scripts for improved development workflow." />
-    <option name="LAST_COMMIT_MESSAGE" value="Remove unused frontend files and refine backend logic&#10;&#10;Deleted redundant frontend assets, including `index.html`, `script.js`, `styles.css`, and others, to streamline the project. Improved back-end code by adjusting async behavior, refining webhook handling, and enhancing error logging and response handling. Updated `package.json` with new build scripts for improved development workflow." />
+    <MESSAGE value="Refactor backend and streamline project setup&#10;&#10;Improved Express webhook handling, added environment variable debugging, and refined error management. Updated `functions/package.json` to clean up scripts and dependencies, removing unused items. Adjusted various files to enhance code consistency, simplify logic, and align with best practices." />
+    <option name="LAST_COMMIT_MESSAGE" value="Refactor backend and streamline project setup&#10;&#10;Improved Express webhook handling, added environment variable debugging, and refined error management. Updated `functions/package.json` to clean up scripts and dependencies, removing unused items. Adjusted various files to enhance code consistency, simplify logic, and align with best practices." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>

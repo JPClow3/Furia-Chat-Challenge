@@ -12,14 +12,14 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
+    "genkit": "^1.7.0",
     "@genkit-ai/core": "^1.7.0",
+    "@genkit-ai/googleai": "latest",
     "@genkit-ai/flow": "^0.5.17",
-    "@genkit-ai/vertexai": "^1.7.0",
-    "@google-cloud/aiplatform": "^4.1.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "genkit": "^1.7.0",
     "hltv": "^3.5.0",
+    "ioredis": "^5.4.1",
     "node-telegram-bot-api": "^0.66.0",
     "wikipedia": "^2.1.2",
     "zod": "^3.24.3"
