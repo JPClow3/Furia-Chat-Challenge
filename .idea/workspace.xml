@@ -9,8 +9,6 @@
   <component name="ChangeListManager">
     <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -139,7 +137,7 @@
       <workItem from="1745864893853" duration="8319000" />
       <workItem from="1746041097368" duration="12709000" />
       <workItem from="1746116453505" duration="6522000" />
-      <workItem from="1746151650911" duration="18061000" />
+      <workItem from="1746151650911" duration="18711000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -237,7 +235,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746294826092</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Enhance FURIA roster fetch with error handling and fallback&#10;&#10;Refactored `executeGetFuriaRoster` to include improved error messaging, addressing Cloudflare blocks. Added Liquipedia API as a fallback to HLTV for roster data. Updated dependencies in `package.json` to include `axios` and `cheerio` for HTML parsing.">
+      <option name="closed" value="true" />
+      <created>1746296772571</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1746296772571</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -281,7 +287,9 @@
     <MESSAGE value="Refactor index.ts to enhance Express integration and improve error handling&#10;&#10;- Updated environment variable loading and debugging.&#10;- Refined Redis client setup and error management.&#10;- Improved flow handling for Telegram bot interactions.&#10;- Streamlined tool definitions and execution logic for Genkit.&#10;- Cleaned up package.json dependencies and scripts.Remove compiled JavaScript files from the repository.&#10;&#10;The `functions/lib/index.js` and `functions/lib/index.js.map` files have been deleted. These are likely build artifacts and should not be tracked in version control to prevent unnecessary clutter." />
     <MESSAGE value="Refactor TypeScript configuration and workspace settings&#10;&#10;- Updated tsconfig.json to improve module resolution and target version.&#10;- Enhanced workspace.xml to reflect changes in project structure and remove unnecessary entries." />
     <MESSAGE value="Improve error handling and caching for FURIA roster fetch&#10;&#10;Refactor `executeGetFuriaRoster` to include better error messages, especially for issues related to Cloudflare blocks. Add Redis caching for API responses to reduce load and improve efficiency. Enhance type imports and overall code readability." />
-    <option name="LAST_COMMIT_MESSAGE" value="Improve error handling and caching for FURIA roster fetch&#10;&#10;Refactor `executeGetFuriaRoster` to include better error messages, especially for issues related to Cloudflare blocks. Add Redis caching for API responses to reduce load and improve efficiency. Enhance type imports and overall code readability." />
+    <MESSAGE value="Add fallback to Liquipedia API for FURIA roster fetch and improve error handling&#10;&#10;- Implement fallback mechanism to Liquipedia MediaWiki API if HLTV fetch fails.&#10;- Enhance error messages for Cloudflare blocks and other API errors.&#10;- Update caching logic for both HLTV and Liquipedia responses.&#10;- Refactor output schema to include source information." />
+    <MESSAGE value="Enhance FURIA roster fetch with error handling and fallback&#10;&#10;Refactored `executeGetFuriaRoster` to include improved error messaging, addressing Cloudflare blocks. Added Liquipedia API as a fallback to HLTV for roster data. Updated dependencies in `package.json` to include `axios` and `cheerio` for HTML parsing." />
+    <option name="LAST_COMMIT_MESSAGE" value="Enhance FURIA roster fetch with error handling and fallback&#10;&#10;Refactored `executeGetFuriaRoster` to include improved error messaging, addressing Cloudflare blocks. Added Liquipedia API as a fallback to HLTV for roster data. Updated dependencies in `package.json` to include `axios` and `cheerio` for HTML parsing." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
