@@ -1,16 +1,13 @@
 /* eslint-disable */
 // index.ts
-// Tentativa 11: Corrigir erros TS2305, TS2353, TS2322, TS2344, TS2349, TS2554
+// Tentativa 11.1: Melhorar mensagem de erro Cloudflare
 
 import * as dotenv from "dotenv";
 import express from "express";
-import type {ZodIssue} from "zod";
+import type {ZodIssue} from "zod"; // Use type import
 import * as z from "zod";
-
 // --- Imports Genkit ---
 import {genkit, GenkitError, MessageData} from "genkit";
-// Remove imports for types not found in @genkit-ai/core
-// import type { MessagePart, ToolRequestPart } from "@genkit-ai/core";
 import {gemini15Flash, googleAI} from "@genkit-ai/googleai";
 // Import defineFlow AND runFlow from @genkit-ai/flow
 import {defineFlow, runFlow} from "@genkit-ai/flow";
@@ -50,7 +47,6 @@ console.info("Instância Bot Telegram OK.");
 
 // --- Inicialização do Genkit ---
 console.info("Inicializando Genkit com plugin googleAI...");
-// Remove config options handled by genkit.config.ts
 const ai = genkit({
     plugins: [ googleAI() ],
 });
@@ -61,33 +57,104 @@ console.info("Instância Genkit 'ai' criada.");
 
 export enum TeamPlayerType { Coach = "Coach", Starter = "Starter", Substitute = "Substitute", Benched = "Benched" }
 
+// Schema para cache (inclui source)
+const furiaRosterCacheSchema = z.object({
+    playersInfo: z.string().optional(),
+    error: z.string().optional(),
+    source: z.literal('cache').or(z.literal('api')).optional(),
+});
+
+// Schema para output da ferramenta (não inclui source)
 const furiaRosterOutputSchema = z.object({
     playersInfo: z.string().optional().describe("String formatada com nome e tipo dos jogadores."),
     error: z.string().optional(),
 });
+
+// Função de execução HLTV com cache e melhor msg de erro
 async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutputSchema>> {
     console.info("[Tool Exec] getFuriaRoster chamada.");
+    const cacheKey = "hltv:furia_roster";
+    const CACHE_TTL_SUCCESS = 14400; // 4 hours
+    const CACHE_TTL_ERROR = 3600;    // 1 hour
+
+    // 1. Check Cache
+    if (redis) {
+        try {
+            const cachedData = await redis.get(cacheKey);
+            if (cachedData) {
+                const parsedCache = JSON.parse(cachedData);
+                const validation = furiaRosterCacheSchema.safeParse(parsedCache);
+                if (validation.success) {
+                    console.info(`[Cache] hit ${cacheKey}`);
+                    // Return the structure expected by the tool definition
+                    return { playersInfo: validation.data.playersInfo, error: validation.data.error };
+                } else {
+                    console.warn(`[Cache] Invalid data for ${cacheKey}, fetching again.`);
+                }
+            } else {
+                console.info(`[Cache] miss ${cacheKey}`);
+            }
+        } catch (e) {
+            console.error(`[Cache] erro read ${cacheKey}`, e);
+        }
+    }
+
+    // 2. Call API if cache miss or invalid
+    let apiResult: z.infer<typeof furiaRosterOutputSchema>;
     try {
         const team = await HLTV.getTeam({ id: 8297 });
-        if (!team || !team.players || team.players.length === 0) return { error: "Dados da equipe FURIA ou jogadores não encontrados no HLTV." };
-        const players = team.players
-          .map(p => ({ name: p.name || 'N/A', type: Object.values(TeamPlayerType).includes(p.type as TeamPlayerType) ? p.type as TeamPlayerType : TeamPlayerType.Starter }))
-          .filter(p => p.name !== 'N/A');
-        if (players.length === 0) return { error: "Nenhum jogador válido encontrado para FURIA." };
-        console.info(`[Tool Exec] Jogadores: ${players.map(p => p.name).join(', ')}`);
-        return { playersInfo: players.map(p => `${p.name} (${p.type})`).join(', ') };
-    } catch (err) { console.error("[Tool Exec] getFuriaRoster Erro:", err); return { error: `Erro ao buscar no HLTV: ${err instanceof Error ? err.message : String(err)}` }; }
+        if (!team || !team.players || team.players.length === 0) {
+            apiResult = { error: "Dados da equipe FURIA ou jogadores não encontrados no HLTV." };
+        } else {
+            const players = team.players
+              .map(p => ({ name: p.name || 'N/A', type: Object.values(TeamPlayerType).includes(p.type as TeamPlayerType) ? p.type as TeamPlayerType : TeamPlayerType.Starter }))
+              .filter(p => p.name !== 'N/A');
+            if (players.length === 0) {
+                apiResult = { error: "Nenhum jogador válido encontrado para FURIA." };
+            } else {
+                console.info(`[Tool Exec] Jogadores HLTV: ${players.map(p => p.name).join(', ')}`);
+                apiResult = { playersInfo: players.map(p => `${p.name} (${p.type})`).join(', ') };
+            }
+        }
+    } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error("[Tool Exec] getFuriaRoster Erro API:", errorMsg);
+        // *** IMPROVED ERROR MESSAGE HANDLING ***
+        if (errorMsg.includes('Cloudflare') || errorMsg.includes('Access denied')) {
+            apiResult = { error: `Não consegui acessar os dados do HLTV no momento (possível bloqueio Cloudflare). Tente novamente mais tarde.` };
+        } else {
+            apiResult = { error: `Erro ao buscar no HLTV: ${errorMsg}` };
+        }
+        // **************************************
+    }
+
+    // 3. Write to Cache
+    if (redis) {
+        try {
+            const ttl = apiResult.error ? CACHE_TTL_ERROR : CACHE_TTL_SUCCESS;
+            const dataToCache: z.infer<typeof furiaRosterCacheSchema> = { ...apiResult, source: 'api' };
+            await redis.set(cacheKey, JSON.stringify(dataToCache), 'EX', ttl);
+            console.info(`[Cache] saved ${cacheKey} (ttl: ${ttl})`);
+        } catch (e) {
+            console.error(`[Cache] erro save ${cacheKey}`, e);
+        }
+    }
+
+    // 4. Return API result (original schema)
+    return apiResult;
 }
+// Define the tool using the ai instance
 const getFuriaRosterTool = ai.defineTool(
   {
       name: "getFuriaRoster",
       description: "Busca a escalação ATUAL de jogadores da FURIA CS2 no HLTV.org.",
       inputSchema: z.object({}),
-      outputSchema: furiaRosterOutputSchema,
+      outputSchema: furiaRosterOutputSchema, // Tool output doesn't include 'source'
   },
   executeGetFuriaRoster
 );
 
+// --- Wikipedia Tool (remains the same) ---
 const wikipediaSearchSchema = z.object({ searchTerm: z.string().describe("Termo a pesquisar") });
 const wikipediaOutputSchema = z.object({
     summary: z.string().optional().describe("Resumo do artigo."),
@@ -168,7 +235,7 @@ const searchWikipediaTool = ai.defineTool(
       name: "searchWikipedia",
       description: "Busca um resumo sobre um tópico na Wikipedia em Português.",
       inputSchema: wikipediaSearchSchema,
-      outputSchema: wikipediaOutputSchema,
+      outputSchema: wikipediaOutputSchema, // Wikipedia function returns source, so schema matches
   },
   executeSearchWikipedia
 );
@@ -182,12 +249,11 @@ const flowInputSchema = z.object({
     chatHistory: z.array(z.any()).optional().default([]),
 });
 
-// Remove explicit Flow type annotation - let TypeScript infer it
+// Let TypeScript infer the flow type
 const furiaChatFlow = defineFlow(
   {
       name: "furiaChatFlow",
       inputSchema: flowInputSchema,
-      // Use the Zod schema directly in the definition
       outputSchema: z.string().describe("Resposta final do assistente"),
   },
   async (input): Promise<string> => {
@@ -224,7 +290,6 @@ const furiaChatFlow = defineFlow(
           const MAX_TOOL_ATTEMPTS = 5;
 
           while (attempts < MAX_TOOL_ATTEMPTS) {
-              // Use llmResponse.message directly (assuming it exists based on prior attempts)
               const responseMessage = llmResponse.message;
               if (!responseMessage) {
                   const directText = llmResponse.text;
@@ -236,19 +301,17 @@ const furiaChatFlow = defineFlow(
                   return "Desculpe, não consegui processar a resposta da IA.";
               }
 
-              // Filter content parts for tool requests (part is 'any')
               const toolRequestParts = responseMessage.content.filter(
                 (part: any) => !!part.toolRequest
               );
 
               if (toolRequestParts.length === 0) {
-                  const finalText = llmResponse.text; // Access getter
+                  const finalText = llmResponse.text;
                   console.info(`[Flow] Resposta final IA: "${finalText?.substring(0,100)}..."`);
                   return finalText ?? "Não consegui gerar uma resposta.";
               }
 
               attempts++;
-              // Map tool names (part is 'any')
               console.info(`[Flow] Tentativa ${attempts}: ${toolRequestParts.length} ferramenta(s) solicitada(s): ${toolRequestParts.map((part: any) => part.toolRequest.name).join(', ')}`);
 
               const toolResponses: MessageData[] = [];
@@ -266,7 +329,7 @@ const furiaChatFlow = defineFlow(
 
                   let executor: Function | undefined;
                   let requiresInput = false;
-                  let toolDefinition: any = undefined;
+                  let toolDefinition: any = undefined; // Using 'any' for simplicity
 
                   if (toolName === getFuriaRosterTool.name) {
                       executor = executeGetFuriaRoster;
@@ -319,7 +382,7 @@ const furiaChatFlow = defineFlow(
           }
 
           console.warn("[Flow] Limite de chamadas de ferramentas atingido.");
-          return llmResponse.text ?? "Tive dificuldades em usar minhas ferramentas após várias tentativas. Pode reformular?"; // Access getter
+          return llmResponse.text ?? "Tive dificuldades em usar minhas ferramentas após várias tentativas. Pode reformular?";
 
       } catch (error) {
           console.error("[Flow] Erro no fluxo principal ou na geração:", error);
@@ -386,16 +449,15 @@ app.post(WEBHOOK_PATH, async (req, res) => {
         try {
             await bot.sendChatAction(chatId, "typing");
 
-            // Use runFlow to execute the flow
-            const flowResult = await runFlow(furiaChatFlow, { // Pass flow definition and input
+            // Use runFlow from @genkit-ai/flow
+            const flowResult = await runFlow(furiaChatFlow, {
                 userMessage: userMessage,
                 chatHistory: historyForFlow
             });
 
             console.info(`[Webhook] Flow result raw: ${JSON.stringify(flowResult)}`);
 
-            // runFlow returns the direct output
-            const finalReply = flowResult;
+            const finalReply = true ? flowResult : "Desculpe, não obtive uma resposta clara do assistente.";
 
             const lastUser: MessageData = { role: 'user', content: [{ text: userMessage }] };
             const lastModel: MessageData = { role: 'model', content: [{ text: finalReply }] };
@@ -443,7 +505,7 @@ const numericPort = Number(port);
 if (isNaN(numericPort)) { console.error(`Porta inválida: ${port}.`); process.exit(1); }
 
 const server = app.listen(numericPort, host, () => {
-    console.info(`Servidor Express escutando em https://${host}:${numericPort}`);
+    console.info(`Servidor Express escutando em http://${host}:${numericPort}`); // Log http for Render detection
     console.info(`Webhook Telegram esperado em: ${WEBHOOK_PATH}`);
 });
 
@@ -477,4 +539,4 @@ const gracefulShutdown = (signal: string) => {
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT')); // Captura Ctrl+C também
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
