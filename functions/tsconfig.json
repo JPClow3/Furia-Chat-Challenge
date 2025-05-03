@@ -4,16 +4,17 @@
     "src"
   ],
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2020",
-    "rootDir": "src",
-    "outDir": "lib",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ES2022",
+    "outDir": "./lib",
+    "rootDir": "./src",
     "strict": true,
-    "noImplicitReturns": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
     "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
-    "noUnusedLocals": true
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

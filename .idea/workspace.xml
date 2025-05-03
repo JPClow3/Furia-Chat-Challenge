@@ -9,12 +9,7 @@
   <component name="ChangeListManager">
     <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/lib/index.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/lib/index.js.map" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/package-lock.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/src/genkit-sample.ts.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/tsconfig.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -142,7 +137,7 @@
       <workItem from="1745864893853" duration="8319000" />
       <workItem from="1746041097368" duration="12709000" />
       <workItem from="1746116453505" duration="6522000" />
-      <workItem from="1746151650911" duration="15002000" />
+      <workItem from="1746151650911" duration="16165000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -216,7 +211,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746151612926</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Refactor index.ts to enhance Express integration and improve error handling&#10;&#10;- Updated environment variable loading and debugging.&#10;- Refined Redis client setup and error management.&#10;- Improved flow handling for Telegram bot interactions.&#10;- Streamlined tool definitions and execution logic for Genkit.&#10;- Cleaned up package.json dependencies and scripts.Remove compiled JavaScript files from the repository.&#10;&#10;The `functions/lib/index.js` and `functions/lib/index.js.map` files have been deleted. These are likely build artifacts and should not be tracked in version control to prevent unnecessary clutter.">
+      <option name="closed" value="true" />
+      <created>1746288763438</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1746288763438</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -256,7 +259,9 @@
     <MESSAGE value="Refactor Express webhook handler and update project files&#10;&#10;Simplified the Express webhook handler by improving response flow and logging clarity. Added a frontend cleanup task to workspace.xml and removed unused frontend files. Updated package.json to fix script duplication in the &quot;build&quot; command." />
     <MESSAGE value="Remove unused frontend files and refine backend logic&#10;&#10;Deleted redundant frontend assets, including `index.html`, `script.js`, `styles.css`, and others, to streamline the project. Improved back-end code by adjusting async behavior, refining webhook handling, and enhancing error logging and response handling. Updated `package.json` with new build scripts for improved development workflow." />
     <MESSAGE value="Refactor backend and streamline project setup&#10;&#10;Improved Express webhook handling, added environment variable debugging, and refined error management. Updated `functions/package.json` to clean up scripts and dependencies, removing unused items. Adjusted various files to enhance code consistency, simplify logic, and align with best practices." />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor backend and streamline project setup&#10;&#10;Improved Express webhook handling, added environment variable debugging, and refined error management. Updated `functions/package.json` to clean up scripts and dependencies, removing unused items. Adjusted various files to enhance code consistency, simplify logic, and align with best practices." />
+    <MESSAGE value="Remove compiled JavaScript files from the repository&#10;&#10;Deleted auto-generated JavaScript files (`index.js` and `index.js.map`) from the `functions/lib` directory. These files are likely part of the build output and should not be tracked in version control." />
+    <MESSAGE value="Refactor index.ts to enhance Express integration and improve error handling&#10;&#10;- Updated environment variable loading and debugging.&#10;- Refined Redis client setup and error management.&#10;- Improved flow handling for Telegram bot interactions.&#10;- Streamlined tool definitions and execution logic for Genkit.&#10;- Cleaned up package.json dependencies and scripts.Remove compiled JavaScript files from the repository.&#10;&#10;The `functions/lib/index.js` and `functions/lib/index.js.map` files have been deleted. These are likely build artifacts and should not be tracked in version control to prevent unnecessary clutter." />
+    <option name="LAST_COMMIT_MESSAGE" value="Refactor index.ts to enhance Express integration and improve error handling&#10;&#10;- Updated environment variable loading and debugging.&#10;- Refined Redis client setup and error management.&#10;- Improved flow handling for Telegram bot interactions.&#10;- Streamlined tool definitions and execution logic for Genkit.&#10;- Cleaned up package.json dependencies and scripts.Remove compiled JavaScript files from the repository.&#10;&#10;The `functions/lib/index.js` and `functions/lib/index.js.map` files have been deleted. These are likely build artifacts and should not be tracked in version control to prevent unnecessary clutter." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
