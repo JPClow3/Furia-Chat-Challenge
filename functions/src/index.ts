@@ -1,6 +1,6 @@
 /* eslint-disable */
 // index.ts
-// Código completo com CORREÇÃO do erro de importação TS2305.
+// Código completo com CORREÇÃO do erro de atribuição TS2322.
 
 import * as dotenv from "dotenv";
 import express from "express";
@@ -10,7 +10,6 @@ import * as z from "zod";
 // --- Imports Genkit ---
 import {genkit, GenkitError, MessageData} from "genkit";
 import {gemini15Flash, googleAI} from "@genkit-ai/googleai";
-// CORREÇÃO TS2305: Remover GenerateResponse da importação abaixo
 import {defineFlow, runFlow} from "@genkit-ai/flow";
 
 // --- Imports das Ferramentas e Outros ---
@@ -69,7 +68,7 @@ const rosterCacheSchema = z.object({
 });
 
 const furiaRosterOutputSchema = z.object({
-    playersInfo: z.string().optional().describe("String formatada com nome e tipo dos jogadores (ou apenas nomes se tipo não disponível)."),
+    playersInfo: z.string().optional().describe("String formatada com nome e tipo dos jogadores (ou apenas nomes se tipo não disponível). Ex: 'yuurih, KSCERATO, FalleN (Captain), molodoy, YEKINDAR (Stand-in), sidde (Coach)'"),
     error: z.string().optional().describe("Mensagem de erro se a busca falhar em todas as fontes."),
     source: z.enum(['HLTV', 'Liquipedia']).optional().describe("Fonte da informação (HLTV ou Liquipedia)."),
 });
@@ -77,8 +76,8 @@ const furiaRosterOutputSchema = z.object({
 // Função de execução com fallback para Liquipedia MediaWiki API e seletores CORRIGIDOS
 async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutputSchema>> {
     console.info("[Tool Exec] getFuriaRoster chamada (HLTV com fallback Liquipedia API).");
-    const hltvCacheKey = "hltv:furia_roster_v2";
-    const liquipediaCacheKey = "liquipedia:furia_roster_v2";
+    const hltvCacheKey = "hltv:furia_roster_v3"; // Incremented cache key version
+    const liquipediaCacheKey = "liquipedia:furia_roster_v3"; // Incremented cache key version
     const LIQUIPEDIA_API_URL = 'https://liquipedia.net/counterstrike/api.php';
     const LIQUIPEDIA_PAGE_NAME = 'FURIA'; // Nome correto da página
     const CUSTOM_USER_AGENT = `FuriaChatChallengeBot/1.0 (${contactInfo})`;
@@ -111,13 +110,22 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
     if (!isCloudflareBlock) {
         console.info("[HLTV API] Tentando buscar dados...");
         try {
-            const team = await HLTV.getTeam({ id: 8297 });
+            const team = await HLTV.getTeam({ id: 8297 }); // FURIA's ID on HLTV
             if (!team?.players?.length) throw new Error("Dados/jogadores não encontrados no HLTV.");
+
+            // Mapear players e coaches do HLTV
             const players = team.players
-              .map(p => ({ name: p.name || 'N/A', type: Object.values(TeamPlayerType).includes(p.type as TeamPlayerType) ? p.type as TeamPlayerType : TeamPlayerType.Starter }))
-              .filter(p => p.name !== 'N/A');
-            if (players.length === 0) throw new Error("Nenhum jogador válido encontrado no HLTV.");
-            const playersInfo = players.map(p => `${p.name} (${p.type})`).join(', ');
+              .map(p => {
+                  let role = '';
+                  if (p.type === TeamPlayerType.Coach) role = ' (Coach)';
+                  // Outras roles como Substitute, etc, podem ser adicionadas aqui se necessário
+                  return p.name ? `${p.name}${role}` : null; // Adiciona role ao nome
+              })
+              .filter((p): p is string => p !== null); // Remove nulos
+
+            if (players.length === 0) throw new Error("Nenhum jogador/coach válido encontrado no HLTV.");
+
+            const playersInfo = players.join(', ');
             console.info(`[HLTV API] Sucesso: ${playersInfo}`);
             hltvResult = { playersInfo: playersInfo, source: 'hltv' };
             if (redis) {
@@ -135,11 +143,7 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
                 try { await redis.set(hltvCacheKey, JSON.stringify(hltvResult), 'EX', CACHE_TTL_ERROR); }
                 catch (e) { console.error(`[Cache HLTV] erro save error ${hltvCacheKey}`, e); }
             }
-            // Don't return immediately if it's a Cloudflare block, proceed to Liquipedia
-            // Only return here if it was a different HLTV error
             if (!isCloudflareBlock) {
-                // We don't return the error details here, just indicate fallback will happen
-                // The final error will be composed later if Liquipedia also fails.
                 console.warn("[HLTV API] Falha não relacionada ao Cloudflare, tentando Liquipedia...");
             }
         }
@@ -156,13 +160,16 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
         try {
             const cachedData = await redis.get(liquipediaCacheKey);
             if (cachedData) {
-                const parsedCache = rosterCacheSchema.parse(JSON.parse(cachedData));
-                if (parsedCache && !parsedCache.error) {
-                    console.info(`[Cache Liquipedia] hit ${liquipediaCacheKey}`);
-                    return { playersInfo: parsedCache.playersInfo, source: 'Liquipedia' };
-                } else if (parsedCache?.error) {
-                    console.warn(`[Cache Liquipedia] hit com erro ${liquipediaCacheKey}: ${parsedCache.error}. Tentando buscar novamente.`);
-                    // Don't use the cached error, try fetching again.
+                try {
+                    const parsedCache = rosterCacheSchema.parse(JSON.parse(cachedData));
+                    if (parsedCache && !parsedCache.error) {
+                        console.info(`[Cache Liquipedia] hit ${liquipediaCacheKey}`);
+                        return { playersInfo: parsedCache.playersInfo, source: 'Liquipedia' };
+                    } else if (parsedCache?.error) {
+                        console.warn(`[Cache Liquipedia] hit com erro ${liquipediaCacheKey}: ${parsedCache.error}. Tentando buscar novamente.`);
+                    }
+                } catch (parseErr) {
+                    console.warn(`[Cache Liquipedia] Erro ao parsear cache ${liquipediaCacheKey}. Buscando novamente.`, parseErr)
                 }
             } else { console.info(`[Cache Liquipedia] miss ${liquipediaCacheKey}`); }
         } catch (e) { console.error(`[Cache Liquipedia] erro read ${liquipediaCacheKey}`, e); }
@@ -174,73 +181,57 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
         const response = await axios.get(LIQUIPEDIA_API_URL, {
             params: { action: 'parse', page: LIQUIPEDIA_PAGE_NAME, prop: 'text', format: 'json', disabletoc: true },
             headers: { 'User-Agent': CUSTOM_USER_AGENT, 'Accept-Encoding': 'gzip' },
-            timeout: 20000 // Increased timeout
+            timeout: 20000
         });
 
         if (response.data?.error) throw new Error(`API Liquipedia retornou erro: ${response.data.error.info}`);
         const htmlContent = response.data?.parse?.text?.['*'];
         if (!htmlContent) throw new Error("Conteúdo HTML não encontrado na resposta da API Liquipedia.");
 
-        // --- LOGGING HTML PARA DEBUG (Remover ou comentar em produção) ---
-        // console.log("--- DEBUG LIQUIPEDIA HTML ---");
-        // console.log(htmlContent.substring(0, 2000)); // Logar início do HTML
-        // console.log("--- END DEBUG LIQUIPEDIA HTML ---");
-        // --- FIM LOGGING ---
-
         const $ = cheerio.load(htmlContent);
         const players: string[] = [];
 
-        // --- SELETORES CHEERIO REFINADOS ---
-        // 1. Encontrar o H2 que contém o ID "Player_Roster" (ou similar)
-        let rosterHeader = $('h2:has(#Player_Roster)'); // Procura H2 com span id="Player_Roster" dentro
-        if (rosterHeader.length === 0) {
-            rosterHeader = $('h2').filter((_i, el) => $(el).text().trim().includes('Player Roster')); // Fallback por texto
-            if (rosterHeader.length === 0) {
-                console.warn("Não foi possível encontrar o header 'Player Roster', tentando H3 'Active'...");
-                rosterHeader = $('h3:has(#Active)'); // Tenta H3 Active como último recurso
-            }
+        // --- SELETORES LIQUIPEDIA CORRIGIDOS ---
+        // 1. Encontrar o H3 com o span id="Active" (Player Roster)
+        const activeHeader = $('h3 > span#Active');
+        if (activeHeader.length === 0) {
+            throw new Error("Não foi possível encontrar o header 'Active' do elenco de jogadores.");
         }
 
-        if (rosterHeader.length === 0) {
-            throw new Error("Não foi possível encontrar a seção de elenco (Player Roster / Active) na página.");
-        }
-
-        // 2. Encontrar a PRIMEIRA tabela 'wikitable roster-card' DEPOIS do header encontrado
-        const rosterTable = rosterHeader.first().nextAll('div.roster-card-wrapper').first().find('table.wikitable.roster-card').first();
-        // Se não achar dentro de wrapper, tenta diretamente a tabela seguinte
-        // const rosterTable = rosterHeader.first().nextAll('table.wikitable.roster-card').first();
+        // 2. Encontrar a PRIMEIRA tabela 'wikitable roster-card' DEPOIS desse header específico
+        const rosterTableWrapper = activeHeader.closest('h3').nextAll('div.table-responsive.roster-card-wrapper').first();
+        const rosterTable = rosterTableWrapper.find('table.wikitable.roster-card').first();
 
         if (rosterTable.length === 0) {
-            // Tenta encontrar a primeira tabela roster-card na página como fallback extremo
-            const fallbackTable = $('table.wikitable.roster-card').first();
-            if (fallbackTable.length > 0) {
-                console.warn("Não encontrou tabela após header, usando a primeira 'roster-card' encontrada na página.");
-                // rosterTable = fallbackTable; // Descomentar se quiser usar este fallback
-                throw new Error("Não foi possível encontrar a tabela de elenco ativa após o header."); // Mais seguro falhar
-            } else {
-                throw new Error("Não foi possível encontrar nenhuma tabela 'wikitable roster-card' na página.");
-            }
+            console.error("[Liquipedia Selector] Não encontrou 'table.wikitable.roster-card' dentro de 'div.table-responsive.roster-card-wrapper' após H3#Active.");
+            throw new Error("Não foi possível encontrar a tabela de elenco ('roster-card') após o header 'Active'.");
         }
 
         // 3. Extrair jogadores da tabela encontrada
-        console.info("Tabela de elenco encontrada, processando linhas...");
+        console.info("[Liquipedia Parser] Tabela de elenco 'Active' encontrada, processando linhas...");
         rosterTable.find('tbody tr.Player').each((_rowIndex, row) => {
-            // Pega o link dentro da primeira célula 'td' com classe 'ID'
-            const playerLink = $(row).find('td.ID a').first();
-            const playerName = playerLink.attr('title'); // Pega o nome do atributo title
+            const $row = $(row);
+            const playerLink = $row.find('td.ID a').first();
+            let playerName: string | undefined = playerLink.attr('title'); // Prioriza o 'title'
 
-            // Verifica se o nome foi encontrado e não é uma página inexistente
-            if (playerName && !playerName.includes('(page does not exist)')) {
-                players.push(playerName.trim());
-            } else {
-                // Fallback para o texto do link se o title falhar (menos ideal)
+            // Fallback para o texto do link se 'title' estiver ausente ou for inválido
+            if (!playerName || playerName.includes('(page does not exist)')) {
                 const fallbackName = playerLink.text().trim();
                 if (fallbackName) {
                     console.warn(`[Liquipedia Parser] Usando fallback de texto para jogador: ${fallbackName}`);
-                    players.push(fallbackName);
+                    playerName = fallbackName;
                 } else {
-                    console.warn("[Liquipedia Parser] Não foi possível extrair nome do jogador da linha:", $(row).html());
+                    console.warn("[Liquipedia Parser] Não foi possível extrair nome do jogador da linha:", $row.find('td.ID').html());
+                    // CORREÇÃO TS2322: Atribuir undefined em vez de null
+                    playerName = undefined; // Marca para pular este jogador
                 }
+            }
+
+            if(playerName) { // Checa se playerName não é undefined ou ''
+                playerName = playerName.trim();
+                const playerRole = $row.find('td.Position i').text().trim();
+                const playerString = playerRole ? `${playerName} ${playerRole}` : playerName;
+                players.push(playerString);
             }
         });
         // --- FIM DOS SELETORES ---
@@ -250,10 +241,9 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
             console.info("[Liquipedia API] Sucesso:", playersInfo);
             liquipediaResult = { playersInfo: playersInfo, source: 'liquipedia' };
         } else {
-            console.error("[Liquipedia API] Extração de jogadores da tabela resultou em lista vazia. Verifique os seletores e a estrutura HTML retornada pela API.");
-            // Logar HTML aqui pode ser útil
-            // console.log("HTML da tabela:", rosterTable.html());
-            throw new Error("Extração da tabela de elenco ativa não retornou jogadores (verificar seletores/estrutura API).");
+            console.error("[Liquipedia API] Extração de jogadores da tabela 'Active' resultou em lista vazia. Verifique seletores e HTML.");
+            // console.log("HTML da tabela 'Active' processada:", rosterTable.html()); // Log para debug
+            throw new Error("Extração da tabela de elenco ativa não retornou jogadores.");
         }
 
     } catch (scrapeErr) {
@@ -275,7 +265,6 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
     if (liquipediaResult && !liquipediaResult.error) {
         return { playersInfo: liquipediaResult.playersInfo, source: 'Liquipedia' };
     } else {
-        // Compõe a mensagem de erro final com base nos erros de HLTV e Liquipedia
         const hltvErrorReason = isCloudflareBlock ? "Bloqueio Cloudflare" : (hltvResult?.error || "Falha desconhecida");
         const liquipediaErrorReason = liquipediaResult?.error || "Falha desconhecida";
         const finalError = `Falha ao obter dados. HLTV: ${hltvErrorReason}. Liquipedia: ${liquipediaErrorReason}. Tente novamente mais tarde.`;
@@ -289,24 +278,24 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
 const getFuriaRosterTool = ai.defineTool(
   {
       name: "getFuriaRoster",
-      description: "Busca a escalação ATUAL de jogadores da FURIA CS2. Tenta HLTV.org primeiro, e usa a API da Liquipedia como fallback se HLTV estiver inacessível ou falhar.",
-      inputSchema: z.object({}), // Não precisa de input
+      description: "Busca a escalação ATUAL de jogadores e técnico da FURIA CS2. Tenta HLTV.org primeiro, e usa a API da Liquipedia como fallback se HLTV falhar.",
+      inputSchema: z.object({}),
       outputSchema: furiaRosterOutputSchema,
   },
   executeGetFuriaRoster
 );
 
 // --- Wikipedia Tool ---
-const wikipediaSearchSchema = z.object({ searchTerm: z.string().describe("Termo a pesquisar") });
+const wikipediaSearchSchema = z.object({ searchTerm: z.string().describe("Termo a pesquisar na Wikipedia (nome de jogador, time, evento, etc.)") });
 const wikipediaOutputSchema = z.object({
-    summary: z.string().optional().describe("Resumo do artigo."),
-    error: z.string().optional(),
+    summary: z.string().optional().describe("Resumo do artigo encontrado."),
+    error: z.string().optional().describe("Mensagem de erro se a busca falhar."),
     source: z.literal('cache').or(z.literal('api')).optional(),
 });
 async function executeSearchWikipedia(input: z.infer<typeof wikipediaSearchSchema>): Promise<z.infer<typeof wikipediaOutputSchema>> {
     const searchTerm = input.searchTerm;
     console.info(`[Tool Exec] searchWikipedia buscando '${searchTerm}'.`);
-    const cacheKey = `wiki:${searchTerm.toLowerCase().replace(/\s+/g, '_')}`; // Normaliza chave
+    const cacheKey = `wiki:${searchTerm.toLowerCase().replace(/\s+/g, '_')}`;
     const CACHE_TTL_SUCCESS = 86400; // 1 day
     const CACHE_TTL_ERROR = 3600;    // 1 hour
 
@@ -322,7 +311,6 @@ async function executeSearchWikipedia(input: z.infer<typeof wikipediaSearchSchem
                             console.info(`[Cache Wiki] hit ${searchTerm}`);
                             return { ...validation.data, source: 'cache' };
                         }
-                        // Se for erro cacheado, não retorna, tenta buscar novamente
                         if (validation.data.error) console.warn(`[Cache Wiki] Erro cacheado para ${searchTerm}: ${validation.data.error}`);
                     } else {
                         console.warn(`[Cache Wiki] Dados inválidos no cache para ${searchTerm}, buscando novamente.`);
@@ -337,20 +325,19 @@ async function executeSearchWikipedia(input: z.infer<typeof wikipediaSearchSchem
     }
 
     try {
-        wiki.setLang('pt'); // Garante português
-        const page = await wiki.page(searchTerm, { autoSuggest: true }); // Tenta achar a página
+        wiki.setLang('pt');
+        const page = await wiki.page(searchTerm, { autoSuggest: true });
         let apiResult: z.infer<typeof wikipediaOutputSchema>;
 
         if (!page) {
             console.warn(`[Wiki API] Página '${searchTerm}' não encontrada.`);
             apiResult = { error: `Página '${searchTerm}' não encontrada na Wikipedia.` };
         } else {
-            const summaryResult = await page.summary(); // Pega o resumo
+            const summaryResult = await page.summary();
             if (!summaryResult?.extract) {
                 console.warn(`[Wiki API] Resumo vazio para ${searchTerm}.`);
                 apiResult = { error: `Não foi possível obter um resumo para '${searchTerm}'.` };
             } else {
-                // Limita o tamanho do resumo para evitar exceder limites
                 const MAX_SUMMARY_LENGTH = 1500;
                 let summaryText = summaryResult.extract;
                 if (summaryText.length > MAX_SUMMARY_LENGTH) {
@@ -362,7 +349,6 @@ async function executeSearchWikipedia(input: z.infer<typeof wikipediaSearchSchem
             }
         }
 
-        // Cacheia o resultado (sucesso ou erro da API)
         if (redis) {
             try {
                 const ttl = apiResult.error ? CACHE_TTL_ERROR : CACHE_TTL_SUCCESS;
@@ -381,7 +367,6 @@ async function executeSearchWikipedia(input: z.infer<typeof wikipediaSearchSchem
         }
         const errorResult = { error: errorMsg };
 
-        // Cacheia o erro da API
         if (redis) {
             try {
                 await redis.set(cacheKey, JSON.stringify(errorResult), 'EX', CACHE_TTL_ERROR);
@@ -394,7 +379,7 @@ async function executeSearchWikipedia(input: z.infer<typeof wikipediaSearchSchem
 const searchWikipediaTool = ai.defineTool(
   {
       name: "searchWikipedia",
-      description: "Busca um resumo sobre um tópico na Wikipedia em Português. Útil para obter informações sobre jogadores, times, eventos, etc.",
+      description: "Busca um resumo sobre um tópico na Wikipedia em Português. Use para obter informações sobre jogadores específicos (ex: FalleN, KSCERATO), times, eventos ou conceitos de CS.",
       inputSchema: wikipediaSearchSchema,
       outputSchema: wikipediaOutputSchema,
   },
@@ -407,7 +392,7 @@ console.info("Ferramentas Genkit definidas: getFuriaRoster (com fallback API), s
 // --- Definição do Flow Principal do Chat ---
 const flowInputSchema = z.object({
     userMessage: z.string(),
-    chatHistory: z.array(z.any()).optional().default([]), // Recebe histórico como array genérico
+    chatHistory: z.array(z.any()).optional().default([]),
 });
 
 const furiaChatFlow = defineFlow(
@@ -420,12 +405,9 @@ const furiaChatFlow = defineFlow(
       const { userMessage, chatHistory } = input;
       console.info(`[Flow] Mensagem: "${userMessage}" | Histórico recebido: ${chatHistory.length} msgs`);
 
-      // Converte/Valida histórico recebido para MessageData[]
       const validHistory: MessageData[] = chatHistory
         .map((msg: any) => {
-            // Validação básica da estrutura esperada
             if (msg && typeof msg.role === 'string' && Array.isArray(msg.content)) {
-                // Valida conteúdo (simplificado, pode ser mais robusto)
                 const validContent = msg.content.every((part: any) =>
                   typeof part.text === 'string' || part.toolRequest || part.toolResponse
                 );
@@ -434,99 +416,87 @@ const furiaChatFlow = defineFlow(
                 }
             }
             console.warn("[Flow] Mensagem inválida no histórico recebido:", msg);
-            return null; // Descarta mensagens inválidas
+            return null;
         })
-        .filter((msg): msg is MessageData => msg !== null); // Remove nulos
+        .filter((msg): msg is MessageData => msg !== null);
 
 
       const currentHistory: MessageData[] = [...validHistory];
       currentHistory.push({ role: 'user', content: [{ text: userMessage }] });
 
-      // Limita o histórico ANTES de enviar para a IA (contando pares user/model + tool)
-      const MAX_FLOW_HISTORY_MESSAGES = 8; // Máximo de 8 mensagens (4 pares user/model + tools)
+      const MAX_FLOW_HISTORY_MESSAGES = 8;
       while (currentHistory.length > MAX_FLOW_HISTORY_MESSAGES) {
-          currentHistory.shift(); // Remove a mais antiga
+          currentHistory.shift();
       }
       console.info(`[Flow] Histórico antes da IA (após adição/trim): ${currentHistory.length} msgs`);
 
-      const systemInstruction = `Você é um assistente especialista focado exclusivamente na equipe de CS2 da FURIA Esports. Use as ferramentas disponíveis para buscar informações ATUALIZADAS quando necessário (escalação 'getFuriaRoster', informações gerais 'searchWikipedia'). Responda APENAS sobre a FURIA CS2 ou seus jogadores e técnico. Seja conciso e direto. Se não souber, a pergunta for sobre outro time/jogo, ou a ferramenta falhar em obter a informação, diga que não tem essa informação específica ou que houve um problema ao buscar. Sempre use português do Brasil. Nunca invente informações. Se a ferramenta 'getFuriaRoster' retornar um erro, informe o usuário que não foi possível buscar a escalação no momento.`;
+      // PROMPT DO SISTEMA APRIMORADO
+      const systemInstruction = `Você é um assistente especialista focado exclusivamente na equipe de CS2 da FURIA Esports.
+        1.  Use a ferramenta 'getFuriaRoster' SEMPRE que perguntarem sobre a escalação ATUAL da FURIA.
+        2.  Se o usuário perguntar sobre uma PESSOA específica (jogador, coach, staff como FalleN, KSCERATO, guerri, sidde, etc.), use a ferramenta 'searchWikipedia' PRIMEIRO para buscar informações sobre essa pessoa. Depois, formule a resposta combinando o resultado da busca com o contexto da FURIA, se aplicável.
+        3.  Use 'searchWikipedia' também para buscar informações gerais sobre times, eventos ou conceitos de CS que o usuário perguntar, mas sempre relacione de volta com a FURIA se possível.
+        4.  Responda APENAS sobre a FURIA CS2, seus jogadores/staff, ou tópicos diretamente relacionados. Seja conciso e direto.
+        5.  Se não souber a resposta, a pergunta for sobre outro time/jogo não relacionado, ou as ferramentas falharem (retornarem erro), informe que não foi possível obter a informação específica ou que houve um problema na busca. NUNCA invente informações.
+        6.  Sempre use português do Brasil.`;
 
       const messagesForAI: MessageData[] = [
           { role: 'system', content: [{ text: systemInstruction }] },
-          ...currentHistory // Adiciona o histórico já trimado
+          ...currentHistory
       ];
 
-      // --- VALIDAÇÃO DE HISTÓRICO ---
-      // Verifica se a primeira mensagem após o system prompt é 'user'
-      // Isso previne o erro "[GoogleGenerativeAI Error]: First content should be with role 'user', got model"
+      // VALIDAÇÃO DE HISTÓRICO
       if (messagesForAI.length > 1 && messagesForAI[1].role !== 'user') {
           console.error(
             "CRITICAL ERROR [Flow]: History is invalid! First message after system prompt is not 'user'.",
             "Messages slice:", JSON.stringify(messagesForAI.slice(0, 3))
           );
-          // Retorna uma mensagem de erro segura para o usuário e evita chamar a IA com histórico inválido
           return "Desculpe, houve um problema interno ao processar o histórico da conversa. Por favor, tente enviar sua mensagem novamente.";
       }
-      // --- FIM DA VALIDAÇÃO ---
+      // FIM DA VALIDAÇÃO
 
 
       try {
           console.info(`[Flow] Chamando ai.generate com ${messagesForAI.length} mensagens e ${[getFuriaRosterTool, searchWikipediaTool].length} ferramentas.`);
 
-          // CORREÇÃO TS2305: Remover tipo GenerateResponse da declaração
           let llmResponse = await ai.generate({
               model: gemini15Flash,
               messages: messagesForAI,
               tools: [getFuriaRosterTool, searchWikipediaTool],
-              config: { temperature: 0.6 }, // Levemente menos criativo
-              // safetySettings: [...] // Considerar adicionar safety settings se necessário
+              config: { temperature: 0.6 },
           });
 
           let attempts = 0;
-          const MAX_TOOL_ATTEMPTS = 3; // Limite mais razoável de tentativas de ferramenta
+          const MAX_TOOL_ATTEMPTS = 3;
 
-          // Loop para lidar com chamadas de ferramentas
           while (attempts < MAX_TOOL_ATTEMPTS) {
-              const responseMessage = llmResponse.message; // A resposta da IA (pode ser texto ou pedido de ferramenta)
+              const responseMessage = llmResponse.message;
 
-              // Verifica se a resposta é inválida
               if (!responseMessage || !Array.isArray(responseMessage.content)) {
-                  // CORREÇÃO TS6234: Acessar .text como propriedade
-                  const directText = llmResponse.text; // Tenta obter texto direto
+                  const directText = llmResponse.text;
                   if (directText) {
                       console.warn("[Flow] Usando llmResponse.text pois .message ou .content é inválido/ausente.");
-                      return directText; // Retorna o texto direto se houver
+                      return directText;
                   }
                   console.error("[Flow] Resposta da IA inválida ou vazia:", llmResponse);
                   return "Desculpe, não consegui processar a resposta da IA neste momento.";
               }
 
-
-              // Verifica se a IA pediu para usar uma ferramenta
               const toolRequestParts = responseMessage.content.filter(part => part.toolRequest);
 
-              // Se não pediu ferramenta, a resposta é final
               if (toolRequestParts.length === 0) {
-                  // CORREÇÃO TS6234: Acessar .text como propriedade
                   const finalText = llmResponse.text;
                   console.info(`[Flow] Resposta final IA (sem ferramenta): "${finalText?.substring(0, 100)}..."`);
-                  return finalText ?? "Não consegui gerar uma resposta."; // Retorna o texto final
+                  return finalText ?? "Não consegui gerar uma resposta.";
               }
 
-              // Se pediu ferramenta, executa e envia de volta
               attempts++;
-              // CORREÇÃO TS18048: Usar asserção não nula (!) pois o filtro garante que toolRequest existe
               console.info(`[Flow] Tentativa ${attempts}/${MAX_TOOL_ATTEMPTS}: ${toolRequestParts.length} ferramenta(s) solicitada(s): ${toolRequestParts.map(part => part.toolRequest!.name).join(', ')}`);
 
-              // Adiciona a requisição da ferramenta ao histórico
               messagesForAI.push(responseMessage);
+              const toolResponses: MessageData[] = [];
 
-              const toolResponses: MessageData[] = []; // Armazena as respostas das ferramentas
-
-              // Executa cada ferramenta solicitada
               for (const part of toolRequestParts) {
                   const toolRequest = part.toolRequest;
-                  // Adicionado check extra para segurança, embora o filtro já faça isso
                   if (!toolRequest) {
                       console.warn("[Flow] Part de toolRequest inesperadamente vazia no loop, pulando.");
                       continue;
@@ -542,32 +512,29 @@ const furiaChatFlow = defineFlow(
                   let requiresInput = false;
                   let toolDefinition: any = undefined;
 
-                  // Mapeia nome da ferramenta para a função e definição
                   if (toolName === getFuriaRosterTool.name) {
                       executor = executeGetFuriaRoster;
-                      requiresInput = false; // getFuriaRoster não tem input
+                      requiresInput = false;
                       toolDefinition = getFuriaRosterTool;
                   } else if (toolName === searchWikipediaTool.name) {
                       executor = executeSearchWikipedia;
-                      requiresInput = true; // searchWikipedia precisa de input
+                      requiresInput = true;
                       toolDefinition = searchWikipediaTool;
                   }
 
                   if (executor && toolDefinition) {
                       try {
                           if (requiresInput) {
-                              // Valida o input fornecido pela IA usando o Zod schema da ferramenta
                               const validation = toolDefinition.inputSchema.safeParse(inputArgs);
                               if (!validation.success) {
                                   console.warn(`[Flow] Input inválido da IA para ${toolName}:`, inputArgs, validation.error.errors);
                                   output = { error: `Input inválido fornecido pela IA para ${toolName}: ${validation.error.errors.map((e: ZodIssue) => e.message).join(', ')}` };
                               } else {
                                   console.info(`[Flow] Input validado para ${toolName}. Executando...`);
-                                  output = await executor(validation.data); // Chama a função da ferramenta com input validado
+                                  output = await executor(validation.data);
                               }
                           } else {
-                              // Ferramenta sem input (getFuriaRoster)
-                              output = await executor(); // Chama a função da ferramenta sem argumentos
+                              output = await executor();
                           }
                       } catch (executionError) {
                           console.error(`[Flow] Erro EXECUTANDO ferramenta ${toolName}:`, executionError);
@@ -578,17 +545,14 @@ const furiaChatFlow = defineFlow(
                       output = { error: `Ferramenta '${toolName}' não reconhecida ou não implementada.` };
                   }
 
-                  // Cria a mensagem de resposta da ferramenta
                   toolResponses.push({
                       role: 'tool',
                       content: [{ toolResponse: { name: toolName, output: output } }]
                   });
-              } // Fim loop for tools
+              }
 
-              // Adiciona as respostas das ferramentas ao histórico
               messagesForAI.push(...toolResponses);
 
-              // Chama a IA novamente com o resultado das ferramentas
               console.info(`[Flow] Rechamando ai.generate com ${toolResponses.length} resposta(s) de ferramenta(s). Histórico total: ${messagesForAI.length} msgs.`);
               llmResponse = await ai.generate({
                   model: gemini15Flash,
@@ -597,11 +561,9 @@ const furiaChatFlow = defineFlow(
                   config: { temperature: 0.6 },
               });
 
-          } // Fim loop while attempts
+          }
 
-          // Se atingiu o limite de tentativas de ferramentas
           console.warn("[Flow] Limite de chamadas de ferramentas atingido.");
-          // CORREÇÃO TS6234: Acessar .text como propriedade
           const lastText = llmResponse.text;
           if (lastText) {
               return lastText + "\n(Nota: Tive dificuldades em usar minhas ferramentas após várias tentativas.)";
@@ -620,7 +582,6 @@ const furiaChatFlow = defineFlow(
           } else {
               errorDetails = String(error);
           }
-          // Retorna uma mensagem de erro genérica e segura para o usuário
           return `Desculpe, ocorreu um problema interno inesperado ao processar sua solicitação (${errorDetails.substring(0,100)}...). Por favor, tente novamente mais tarde.`;
       }
   }
@@ -630,24 +591,22 @@ console.info("Flow Genkit 'furiaChatFlow' definido com lógica de ferramentas.")
 
 // --- Configuração do Servidor Express ---
 const app = express();
-app.use(express.json()); // Middleware para parsear JSON no body
+app.use(express.json());
 
-// Rota raiz simples para health check
 app.get('/', (_req, res) => {
     res.status(200).send('Servidor Bot Furia CS (Render/Redis/Genkit+googleAI) Ativo!');
 });
 
 // --- Rota do Webhook Telegram ---
-const WEBHOOK_PATH = `/telegram/webhook/${telegramToken}`; // Caminho seguro usando o token
+const WEBHOOK_PATH = `/telegram/webhook/${telegramToken}`;
 console.info(`Configurando POST para webhook em: ${WEBHOOK_PATH}`);
 
 app.post(WEBHOOK_PATH, async (req, res) => {
     const update: TelegramBot.Update = req.body;
 
-    // Validações básicas do update
     if (!update || !update.message || !update.message.text || !update.message.chat?.id) {
         console.info(`[Webhook] Update ignorado (estrutura inválida ou sem texto/ID).`);
-        res.sendStatus(200); // Responde OK para o Telegram não reenviar
+        res.sendStatus(200);
         return;
     }
     if (update.message.from?.is_bot) {
@@ -657,77 +616,63 @@ app.post(WEBHOOK_PATH, async (req, res) => {
     }
 
     const chatId = update.message.chat.id;
-    const userMessage = update.message.text.trim(); // Remove espaços extras
+    const userMessage = update.message.text.trim();
     console.info(`[Webhook] Msg chat ${chatId}: "${userMessage}"`);
 
-    // Responde imediatamente ao Telegram para evitar timeouts
     res.sendStatus(200);
 
     const contextKey = `genkit_history:${chatId}`;
     let historyForFlow: MessageData[] = [];
 
-    // --- Leitura do Histórico do Redis ---
     if (redis) {
         try {
             const storedHistory = await redis.get(contextKey);
             if (storedHistory) {
                 try {
                     const parsedHistory = JSON.parse(storedHistory);
-                    // Valida se é um array antes de usar
                     if (Array.isArray(parsedHistory)) {
-                        // Filtra garantindo a estrutura mínima (pode ser mais robusto)
                         historyForFlow = parsedHistory.filter(msg =>
                           msg && typeof msg.role === 'string' && Array.isArray(msg.content)
                         );
                         console.info(`[Webhook] Histórico Genkit recuperado Redis chat ${chatId} (${historyForFlow.length} msgs válidas)`);
                     } else {
                         console.warn(`[Webhook] Histórico Genkit inválido (não é array) Redis chat ${chatId}. Ignorando.`);
-                        await redis.del(contextKey); // Deleta histórico inválido
+                        await redis.del(contextKey);
                     }
                 } catch (parseError) {
                     console.warn(`[Webhook] Erro ao parsear histórico Genkit Redis chat ${chatId}. Ignorando.`, parseError);
-                    await redis.del(contextKey); // Deleta histórico inválido
+                    await redis.del(contextKey);
                 }
             } else {
                 console.info(`[Webhook] Histórico não encontrado no Redis para chat ${chatId}.`);
             }
         } catch (redisError) {
             console.error(`[Webhook] Erro leitura Redis chat ${chatId}:`, redisError);
-            // Continua sem histórico em caso de erro no Redis
         }
     }
 
-    // --- Execução do Flow e Resposta ---
     try {
-        await bot.sendChatAction(chatId, "typing"); // Indica que o bot está "pensando"
+        await bot.sendChatAction(chatId, "typing");
 
-        // Chama o flow Genkit de forma segura
         const flowResult = await runFlow(furiaChatFlow, {
             userMessage: userMessage,
-            chatHistory: historyForFlow // Passa o histórico recuperado (ou vazio)
+            chatHistory: historyForFlow
         });
 
         console.info(`[Webhook] Flow result raw: "${flowResult?.substring(0, 200)}..."`);
 
         const finalReply = flowResult;
 
-        // --- Atualização e Salvamento do Histórico no Redis ---
-        // Adiciona a mensagem do usuário e a resposta do modelo ao histórico que será salvo
         const lastUserMessage: MessageData = { role: 'user', content: [{ text: userMessage }] };
         const lastModelResponse: MessageData = { role: 'model', content: [{ text: finalReply }] };
-
-        // Usa o histórico VÁLIDO recuperado como base para salvar
         const finalHistoryToSave = [...historyForFlow, lastUserMessage, lastModelResponse];
-
-        // Limita o histórico que será salvo no Redis
-        const MAX_REDIS_HISTORY_MESSAGES = 8; // Manter sincronizado com MAX_FLOW_HISTORY_MESSAGES
+        const MAX_REDIS_HISTORY_MESSAGES = 8;
         while (finalHistoryToSave.length > MAX_REDIS_HISTORY_MESSAGES) {
-            finalHistoryToSave.shift(); // Remove a mensagem mais antiga (seja user ou model)
+            finalHistoryToSave.shift();
         }
 
         if (redis) {
             try {
-                // Salva por 30 minutos (ajustar conforme necessidade)
                 await redis.set(contextKey, JSON.stringify(finalHistoryToSave), 'EX', 60 * 30);
                 console.info(`[Webhook] Histórico Genkit (${finalHistoryToSave.length} msgs) salvo no Redis para chat ${chatId}`);
             } catch (redisError) {
@@ -735,25 +680,19 @@ app.post(WEBHOOK_PATH, async (req, res) => {
             }
         }
 
-        // Envia a resposta final para o usuário no Telegram
-        // Usar try-catch específico para o envio da mensagem
         try {
             await bot.sendMessage(chatId, finalReply, { parse_mode: 'Markdown' });
             console.info(`[Webhook] Resposta enviada para chat ${chatId}.`);
         } catch (telegramSendError) {
             console.error(`[Webhook] Erro ao ENVIAR mensagem via Telegram para chat ${chatId}:`, telegramSendError);
-            // Não tentar reenviar mensagem de erro aqui para evitar loops
         }
 
 
     } catch (flowError) {
-        // Captura erros que podem ocorrer na chamada do runFlow ou antes do envio da mensagem
         console.error(`[Webhook] Erro GERAL ao processar mensagem ou chamar flow para chat ${chatId}:`, flowError);
         try {
-            // Tenta enviar uma mensagem de erro genérica ao usuário
             await bot.sendMessage(chatId, "⚠️ Desculpe, ocorreu um erro inesperado ao processar sua mensagem. Por favor, tente novamente.");
         } catch (sendErrorError) {
-            // Se até o envio da mensagem de erro falhar, apenas loga
             console.error("[Webhook] Falha CRÍTICA ao enviar mensagem de erro final para o chat", chatId, sendErrorError);
         }
     }
@@ -761,8 +700,8 @@ app.post(WEBHOOK_PATH, async (req, res) => {
 
 
 // --- Iniciar Servidor Express ---
-const port = process.env.PORT || 10000; // Porta padrão do Render
-const host = '0.0.0.0'; // Necessário para o Render
+const port = process.env.PORT || 10000;
+const host = '0.0.0.0';
 const numericPort = Number(port);
 
 if (isNaN(numericPort)) {
@@ -771,35 +710,33 @@ if (isNaN(numericPort)) {
 }
 
 const server = app.listen(numericPort, host, () => {
-    console.info(`Servidor Express escutando em https://${host}:${numericPort}`); // Usar http para Render internamente
+    console.info(`Servidor Express escutando em https://${host}:${numericPort}`);
     console.info(`Webhook Telegram configurado para POST em: ${WEBHOOK_PATH}`);
 });
 
 // --- Encerramento Gracioso (Graceful Shutdown) ---
 const gracefulShutdown = (signal: string) => {
     console.info(`${signal} signal received: closing server...`);
-    server.close(async () => { // Fecha o servidor HTTP
+    server.close(async () => {
         console.info('HTTP server closed.');
         if (redis) {
             try {
-                await redis.quit(); // Tenta fechar a conexão Redis
+                await redis.quit();
                 console.info('Redis connection closed gracefully.');
             } catch (redisErr) {
                 console.error('Erro ao fechar conexão Redis:', redisErr);
-                process.exitCode = 1; // Indica erro na saída
+                process.exitCode = 1;
             }
         }
         console.info('Exiting process.');
-        process.exit(); // Sai do processo (process.exitCode será 0 ou 1)
+        process.exit();
     });
 
-    // Define um timeout para forçar o encerramento se demorar muito
     setTimeout(() => {
         console.error("Could not close connections in time, forcefully shutting down");
         process.exit(1);
-    }, 10000); // 10 segundos de timeout
+    }, 10000);
 };
 
-// Escuta por sinais de encerramento
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM')); // Sinal padrão do Render/Docker
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));   // Sinal de Ctrl+C
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

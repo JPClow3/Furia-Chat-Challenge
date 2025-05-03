@@ -137,7 +137,7 @@
       <workItem from="1745864893853" duration="8319000" />
       <workItem from="1746041097368" duration="12709000" />
       <workItem from="1746116453505" duration="6522000" />
-      <workItem from="1746151650911" duration="21330000" />
+      <workItem from="1746151650911" duration="23218000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -251,7 +251,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746298119972</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="Refactor FURIA roster fetch to improve error handling and selector logic&#10;&#10;- Updated Cheerio selectors for better parsing of active player rosters from Liquipedia.&#10;- Enhanced error messaging for HLTV connection issues and added fallback logic to Liquipedia API.&#10;- Improved caching mechanisms and refined output schema for clearer data representation.">
+      <option name="closed" value="true" />
+      <created>1746311762879</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1746311762879</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -298,7 +306,8 @@
     <MESSAGE value="Add fallback to Liquipedia API for FURIA roster fetch and improve error handling&#10;&#10;- Implement fallback mechanism to Liquipedia MediaWiki API if HLTV fetch fails.&#10;- Enhance error messages for Cloudflare blocks and other API errors.&#10;- Update caching logic for both HLTV and Liquipedia responses.&#10;- Refactor output schema to include source information." />
     <MESSAGE value="Enhance FURIA roster fetch with error handling and fallback&#10;&#10;Refactored `executeGetFuriaRoster` to include improved error messaging, addressing Cloudflare blocks. Added Liquipedia API as a fallback to HLTV for roster data. Updated dependencies in `package.json` to include `axios` and `cheerio` for HTML parsing." />
     <MESSAGE value="Fix Liquipedia selectors and improve FURIA roster fetch&#10;&#10;Updated Cheerio selectors to properly parse active player rosters from Liquipedia's API. Enhanced error messaging and fallback logic for HLTV connection issues. Adjusted caching mechanisms and refined output schema for clearer data representation." />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix Liquipedia selectors and improve FURIA roster fetch&#10;&#10;Updated Cheerio selectors to properly parse active player rosters from Liquipedia's API. Enhanced error messaging and fallback logic for HLTV connection issues. Adjusted caching mechanisms and refined output schema for clearer data representation." />
+    <MESSAGE value="Refactor FURIA roster fetch to improve error handling and selector logic&#10;&#10;- Updated Cheerio selectors for better parsing of active player rosters from Liquipedia.&#10;- Enhanced error messaging for HLTV connection issues and added fallback logic to Liquipedia API.&#10;- Improved caching mechanisms and refined output schema for clearer data representation." />
+    <option name="LAST_COMMIT_MESSAGE" value="Refactor FURIA roster fetch to improve error handling and selector logic&#10;&#10;- Updated Cheerio selectors for better parsing of active player rosters from Liquipedia.&#10;- Enhanced error messaging for HLTV connection issues and added fallback logic to Liquipedia API.&#10;- Improved caching mechanisms and refined output schema for clearer data representation." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
