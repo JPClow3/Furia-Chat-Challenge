@@ -9,7 +9,6 @@
   <component name="ChangeListManager">
     <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -140,7 +139,7 @@
       <workItem from="1746116453505" duration="6522000" />
       <workItem from="1746151650911" duration="30926000" />
       <workItem from="1746330286171" duration="24000" />
-      <workItem from="1746330329557" duration="28000" />
+      <workItem from="1746330329557" duration="541000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -294,7 +293,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746329078660</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="Refactor FURIA roster fetch logic and optimize tools&#10;&#10;Improved HLTV and Liquipedia integration for roster retrieval via enhanced error handling, better caching, and fallback mechanisms. Added support for HLTV RSS news and refined Wikipedia search functionality. Code was streamlined for improved maintainability and clarity.">
+      <option name="closed" value="true" />
+      <created>1746330401327</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1746330401327</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -319,8 +326,6 @@
     <option name="CODE_SMELLS_PROFILE" value="Default" />
     <option name="CHECK_NEW_TODO" value="false" />
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
-    <MESSAGE value="Update Firebase and TypeScript configurations, add dotenv dependency, and enhance chat interface" />
-    <MESSAGE value="Update `index.js.map` source mapping&#10;&#10;This change modifies the mapping configuration in `index.js.map` to align with updated source paths and mapping settings. It ensures accurate source mapping for troubleshooting and debugging." />
     <MESSAGE value="Update source map in index.js.map&#10;&#10;The source map file for index.js has been modified to reflect changes in mappings, sources, and related metadata. These updates ensure alignment with the current state of the source code, improving debugging accuracy." />
     <MESSAGE value="Add ESLint ignore file, update .gitignore, and refactor index.js for Telegram bot integration&#10;&#10;- Created .eslintignore to exclude genkit.config.ts from linting.&#10;- Updated .gitignore to include additional patterns for environment files and IDE configurations.&#10;- Refactored index.js to improve Telegram bot integration, including error handling and logging enhancements.&#10;- Adjusted dotenv configuration for better environment variable management." />
     <MESSAGE value="Refactor index.ts to integrate Express server for Telegram webhooks and enhance Genkit with Vertex AI tools" />
@@ -344,7 +349,9 @@
     <MESSAGE value="Refactor FURIA roster fetch with improved API integration and error handling&#10;&#10;- Enhanced RapidAPI and Liquipedia scraper integration for fetching upcoming matches and recent results.&#10;- Improved TypeScript type assignments and resolved TS2322 errors.&#10;- Updated HTML parsing logic with corrected selectors for player roles.&#10;- Enhanced error handling for HLTV API calls and added fallback to Liquipedia.&#10;- Updated bot responses to maintain an engaging and friendly tone." />
     <MESSAGE value="Add rss-parser dependency to enhance feed parsing capabilities" />
     <MESSAGE value="Refactor FURIA roster fetch and optimize APIs/tools.&#10;&#10;Streamlined HLTV and Liquipedia integrations for FURIA roster retrieval with enhanced error handling and cache mechanisms. Added HLTV RSS news support, refined Wikipedia search summary logic, and cleaned up redundant code for improved maintainability." />
-    <option name="LAST_COMMIT_MESSAGE" value="" />
+    <MESSAGE value="Add rss-parser dependency and update workspace configuration for improved feed parsing" />
+    <MESSAGE value="Refactor FURIA roster fetch logic and optimize tools&#10;&#10;Improved HLTV and Liquipedia integration for roster retrieval via enhanced error handling, better caching, and fallback mechanisms. Added support for HLTV RSS news and refined Wikipedia search functionality. Code was streamlined for improved maintainability and clarity." />
+    <option name="LAST_COMMIT_MESSAGE" value="Refactor FURIA roster fetch logic and optimize tools&#10;&#10;Improved HLTV and Liquipedia integration for roster retrieval via enhanced error handling, better caching, and fallback mechanisms. Added support for HLTV RSS news and refined Wikipedia search functionality. Code was streamlined for improved maintainability and clarity." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
