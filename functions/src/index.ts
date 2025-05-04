@@ -1,7 +1,7 @@
 /* eslint-disable */
 // index.ts
-// Versão COMPLETA FINAL com ferramentas RapidAPI, Scrapers, Notícias HLTV,
-// Comandos Rápidos e Prompt Refinado v2 (temp 0.5).
+// Versão COMPLETA FINAL (sem omissões) com ferramentas RapidAPI, Scrapers, Notícias HLTV,
+// Comandos Rápidos e Prompt Refinado v4 (temp 0.5).
 
 import * as dotenv from "dotenv";
 import express from "express";
@@ -115,10 +115,7 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
           const parsedCache = rosterCacheSchema.parse(JSON.parse(cachedData));
           if (parsedCache && !parsedCache.error) {
             console.info(`[Cache HLTV] hit ${hltvCacheKey}`);
-            return {
-              playersInfo: parsedCache.playersInfo,
-              source: "HLTV",
-            };
+            return {playersInfo: parsedCache.playersInfo, source: "HLTV"};
           } else if (parsedCache?.error) {
             console.warn(`[Cache HLTV] hit com erro ${hltvCacheKey}: ${parsedCache.error}`);
             if (parsedCache.error.includes("Cloudflare") || parsedCache.error.includes("Access denied") || parsedCache.error.includes("bloqueio")) {
@@ -187,10 +184,7 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
           const p = rosterCacheSchema.parse(JSON.parse(d));
           if (!p.error) {
             console.info(`[Cache Liquipedia] hit ${liquipediaCacheKey}`);
-            return {
-              playersInfo: p.playersInfo,
-              source: "Liquipedia",
-            };
+            return {playersInfo: p.playersInfo, source: "Liquipedia"};
           } else {
             console.warn(`[Cache Liquipedia] hit erro ${liquipediaCacheKey}`);
           }
@@ -404,10 +398,7 @@ async function executeGetFuriaUpcomingMatchesRapidAPI(): Promise<z.infer<typeof 
   const options = {
     method: "GET",
     url: `https://${RAPIDAPI_HOST}/api/esport/team/${FURIA_TEAM_ID}/matches/next/3`,
-    headers: {
-      "x-rapidapi-key": RAPIDAPI_KEY,
-      "x-rapidapi-host": RAPIDAPI_HOST,
-    },
+    headers: {"x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": RAPIDAPI_HOST},
     timeout: 15000,
   };
   let result: z.infer<typeof upcomingMatchesRapidAPIOutputSchema>;
@@ -492,10 +483,7 @@ async function executeGetFuriaRecentResultsRapidAPI(): Promise<z.infer<typeof re
   const options = {
     method: "GET",
     url: `https://${RAPIDAPI_HOST}/api/esport/team/${FURIA_TEAM_ID}/matches/last/5`,
-    headers: {
-      "x-rapidapi-key": RAPIDAPI_KEY,
-      "x-rapidapi-host": RAPIDAPI_HOST,
-    },
+    headers: {"x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": RAPIDAPI_HOST},
     timeout: 15000,
   };
   let result: z.infer<typeof recentResultsRapidAPIOutputSchema>;
@@ -514,7 +502,7 @@ async function executeGetFuriaRecentResultsRapidAPI(): Promise<z.infer<typeof re
         const awayScore = match.awayScore?.display ?? match.awayScore?.current ?? "?";
         const tournament = match.tournament?.name ?? "?";
         const winnerCode = match.winnerCode;
-        let opponent: string;
+        let opponent = "?";
         let fScore = "?";
         let oScore = "?";
         let outcome = "";
@@ -604,7 +592,6 @@ async function executeGetFuriaUpcomingMatchesLiquipedia(): Promise<z.infer<typeo
     if (!htmlContent) throw new Error("HTML Liquipedia não encontrado.");
     const $ = cheerio.load(htmlContent);
     const matches: string[] = [];
-    // Seletor FRÁGIL: Tenta pegar próximos jogos do Infobox (pode mudar!)
     $("div.fo-nttax-infobox table.infobox_matches_content").first().find("tbody tr").each((_idx, row) => {
       const $row = $(row);
       const tournamentLink = $row.find("td a").first();
@@ -707,7 +694,6 @@ async function executeGetFuriaRecentResultsLiquipedia(): Promise<z.infer<typeof 
     if (!htmlContent) throw new Error("HTML Liquipedia não encontrado.");
     const $ = cheerio.load(htmlContent);
     const results: string[] = [];
-    // Seletor FRÁGIL
     $(".wikitable.recent-matches tbody tr").slice(0, 7).each((_i, el) => {
       const $row = $(el);
       const cells = $row.find("td");
@@ -791,7 +777,7 @@ async function executeGetFuriaNewsHltv(): Promise<z.infer<typeof hltvNewsOutputS
       if (isRelevant && item.title && link) {
         furiaNews.push(`${item.title.trim()}: ${link}`);
         if (furiaNews.length >= 5) break;
-      }
+      } // Limita a 5
     }
     if (furiaNews.length > 0) {
       result = {newsInfo: furiaNews.join("; ")};
@@ -857,19 +843,30 @@ const furiaChatFlow = defineFlow(
     }
     console.info(`[Flow] Histórico antes da IA (após adição/trim): ${currentHistory.length} msgs`);
 
-    // ***** PROMPT FINAL REFINADO (v3) - Evitar Metalinguagem e Priorizar Ferramentas *****
-    const systemInstruction = `Você é FURIOSO, o assistente virtual oficial e super fã da FURIA Esports! Sua missão é ajudar a galera com informações precisas e atualizadas sobre nosso time de CS2, sempre com muito entusiasmo!
-        - **Tom e Persona:** Responda em português do Brasil, com tom amigável, caloroso, brincalhão e apaixonado pela FURIA 🐾🔥🏆🔫🥳🎉! Use "nós", "nosso time". Preste atenção no histórico da conversa. Varie suas respostas e SEMPRE tente terminar com uma pergunta engajadora.
-        - **Foco TOTAL:** Responda **SOMENTE** sobre a FURIA CS2 (jogadores, coach, staff, partidas, história, notícias). Se a pergunta for sobre outro time/jogo, diga educadamente que seu foco é 100% FURIA (Ex: "Opa! Meu negócio é FURIA na veia! 🐾 Sobre outros times não consigo te ajudar agora, beleza?"). Não opine sobre performance nem dê conselhos de aposta.
-        - **USO OBRIGATÓRIO DAS FERRAMENTAS:** Você PRECISA usar as ferramentas certas para buscar informações atualizadas:
-            - Pergunta sobre **elenco/time atual**? Use OBRIGATORIAMENTE 'getFuriaRoster'. A resposta desta ferramenta é a VERDADE sobre quem está no time AGORA.
+    // ***** PROMPT FINAL REFINADO (v4) - Evitar Metalinguagem e Priorizar Ferramentas *****
+    const systemInstruction = `Você é FURIOSO, o assistente virtual oficial e super fã da FURIA Esports! Sua missão é ajudar a galera com informações precisas e atualizadas sobre nosso time de CS2, sempre com muito entusiasmo! Lembre-se do nosso papo anterior pra gente continuar na mesma página! 😉
+        - **Tom:** Responda sempre em português do Brasil, com um tom amigável, caloroso, um pouco brincalhão e MUITO apaixonado pela FURIA! Mostre empolgação! Use exclamações! Uma gíria gamer leve (rushar, na mira!) cai bem de vez em quando, mas sem exagero. Ex: "Que demais essa pergunta!", "Boa, consegui achar aqui pra você! 🎉".
+        - **Emojis:** Use emojis para deixar a conversa mais animada e com a cara da FURIA! 🐾🔥🏆🔫🥳🎉 Mas use com moderação, viu?
+        - **Persona:** Você faz parte da família FURIA! Use "nós", "nosso time", "nossa pantera". Preste atenção no histórico da conversa para dar respostas mais relevantes e evitar repetições.
+        - **Foco TOTAL:** Sua especialidade é a FURIA CS2. Responda **SOMENTE** sobre nossos jogadores, coach, staff, partidas, história e notícias relacionadas. Qualquer pergunta fora disso, responda educadamente no seu estilo: "Opa! Meu negócio é FURIA na veia! 🐾 Sobre outros times não consigo te ajudar agora, beleza? Mas se quiser saber algo da nossa pantera, manda bala!". Não dê opiniões sobre performance nem conselhos de aposta.
+        - **Uso OBRIGATÓRIO das Ferramentas (Sua Caixa de Habilidades! 🛠️):** Você DEVE usar as ferramentas certas para buscar informações atualizadas.
+            - Pergunta sobre **elenco/time atual**? Use OBRIGATORIAMENTE 'getFuriaRoster'. A informação da ferramenta SEMPRE sobrepõe o que você 'lembra'.
             - Pergunta sobre **próximos jogos**? Use OBRIGATORIAMENTE 'getFuriaUpcomingMatchesRapidAPI' (prioridade) ou 'getFuriaUpcomingMatchesLiquipedia' (backup).
             - Pergunta sobre **resultados recentes**? Use OBRIGATÓRIO 'getFuriaRecentResultsRapidAPI' (prioridade) ou 'getFuriaRecentResultsLiquipedia' (backup).
             - Pergunta sobre **notícias/novidades**? Use OBRIGATÓRIO 'getFuriaNewsHltv'.
             - Pergunta sobre **pessoa específica** (jogador/coach)? Use OBRIGATÓRIO 'searchWikipedia'.
             - Pergunta sobre **tópico geral** (torneio, etc.)? Use 'searchWikipedia'.
-        - **IMPORTANTE: SEM METALINGUAGEM!** NUNCA, JAMAIS, em hipótese alguma, mencione que você "usou uma ferramenta", "buscou na API", "pesquisou na Wikipedia", "consultei a Liquipedia", etc. Aja como se você soubesse a informação. Apresente o resultado DIRETAMENTE.
-        - **Falhas:** Se uma ferramenta OBRIGATÓRIA falhar ou não encontrar dados: informe que não conseguiu a informação específica NO MOMENTO e sugira verificar fontes oficiais (HLTV, redes da FURIA). NUNCA invente dados! Ex: "Putz, não achei essa info de jogo aqui agora! 😥 Melhor conferir no HLTV ou nas redes da FURIA pra ter certeza 😉". #GoFURIA`;
+        - **Como Responder (O mais importante!):**
+            - **SEM METALINGUAGEM!** NUNCA, JAMAIS, em hipótese alguma, mencione que você "usou uma ferramenta", "buscou na API", "pesquisou na Wikipedia", "consultei a Liquipedia", etc. Aja como se você soubesse a informação naturalmente como membro da FURIA. Apresente a informação DIRETAMENTE!
+            - **Sintetize Dados de Jogos/Notícias:** Se receber info de múltiplas fontes:
+                - Iguais/Complementares? Ótimo! Junta tudo numa resposta show!
+                - Diferentes? Seja transparente sobre a INFORMAÇÃO, não sobre a fonte. Ex: "Olha, tenho uma data aqui [Data A], mas também vi [Data B]. A mais provável é [Data A], mas fica de olho!"
+                - Só uma funcionou? Use a informação dela.
+            - **VARIE!** Use saudações diferentes, formas diferentes de apresentar a info.
+            - **SEMPRE ENGAGE!** Tente terminar sua resposta com uma pergunta para manter o papo rolando! Ex: "Quer saber mais algum detalhe sobre ele?", "Posso te ajudar com outro jogador ou campeonato?", "Curtiu a info? Quer saber de mais alguém?", "Algo mais que posso te ajudar sobre a nossa pantera?".
+        - **Lidando com Falhas (Acontece! 😅):**
+            - Se as ferramentas OBRIGATÓRIAS falharem ou não encontrarem NADA: informe que não conseguiu a informação específica NO MOMENTO e sugira verificar fontes oficiais (HLTV, site/redes da FURIA). Seja leve! Ex: "Putz, não achei essa info de jogo aqui agora! 😥 Dá uma conferida no HLTV ou nas redes da FURIA pra ter certeza 😉" ou "Xiii, minhas fontes tão offline pra essa info... 🔮 Melhor dar uma olhada nas redes oficiais da Pantera!". NUNCA invente dados! #GoFURIA`;
+
 
     const messagesForAI: MessageData[] = [{
       role: "system",
@@ -881,21 +878,22 @@ const furiaChatFlow = defineFlow(
     }
 
     try {
-      const toolsToUse = [
+      const toolsToUse = [ // Lista completa de ferramentas
         getFuriaRosterTool, searchWikipediaTool, getFuriaUpcomingMatchesRapidAPITool,
         getFuriaRecentResultsRapidAPITool, getFuriaUpcomingMatchesLiquipediaTool,
         getFuriaRecentResultsLiquipediaTool, getFuriaNewsHltvTool,
       ];
       console.info(`[Flow] Chamando ai.generate com ${messagesForAI.length} mensagens e ${toolsToUse.length} ferramentas.`);
 
+      // ***** TEMPERATURA REDUZIDA *****
       let llmResponse = await ai.generate({
         model: gemini15Flash,
         messages: messagesForAI,
         tools: toolsToUse,
         config: {temperature: 0.5},
-      }); // Temperatura 0.5
+      });
       let attempts = 0;
-      const MAX_TOOL_ATTEMPTS = 3;
+      const MAX_TOOL_ATTEMPTS = 3; // Mantendo 3 para evitar loops excessivos e custo
 
       while (attempts < MAX_TOOL_ATTEMPTS) {
         const responseMessage = llmResponse.message;
@@ -982,12 +980,7 @@ const furiaChatFlow = defineFlow(
           }
           toolResponses.push({
             role: "tool",
-            content: [{
-              toolResponse: {
-                name: toolName,
-                output: output,
-              },
-            }],
+            content: [{toolResponse: {name: toolName, output: output}}],
           });
         }
         messagesForAI.push(...toolResponses);
@@ -1042,7 +1035,7 @@ function formatToolResponseForUser(toolName: string, response: any): string {
     if (response.newsInfo.startsWith("Nenhuma")) return `Não achei notícias fresquinhas da FURIA no feed da HLTV agora. 📰`;
     return `Últimas notícias da HLTV:\n- ${response.newsInfo.replace(/;\s*/g, "\n- ")} 📰`;
   }
-  return `Resultado de ${toolName}: ${JSON.stringify(response)}`;
+  return `Resultado de ${toolName}: ${JSON.stringify(response)}`; // Fallback genérico
 }
 
 // --- Configuração do Servidor Express e Webhook com Comandos ---
@@ -1149,11 +1142,14 @@ app.post(WEBHOOK_PATH, async (req, res) => {
     }
     try {
       await bot.sendChatAction(chatId, "typing");
-      const finalReply = await runFlow(furiaChatFlow, {
+      const flowResult = await runFlow(furiaChatFlow, {
         userMessage: userMessage,
         chatHistory: historyForFlow,
       });
-      console.info(`[Webhook] Flow raw: "${finalReply.substring(0, 200)}..."`);
+      // Corrigido para garantir que flowResult seja string antes de acessar substring
+      const finalReply = flowResult;
+      console.info(`[Webhook] Flow raw: "${finalReply.substring(0, 200)}..."`); // Log da resposta final real
+
       const lastUser: MessageData = {
         role: "user",
         content: [{text: userMessage}],
@@ -1246,4 +1242,4 @@ const gracefulShutdown = (signal: string) => {
   }, 10000);
 };
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGINT", () => gracefulShutdown('SIGINT'));
