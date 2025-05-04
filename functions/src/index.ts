@@ -1,6 +1,6 @@
 /* eslint-disable */
 // index.ts
-// Código completo com CORREÇÃO do erro de atribuição TS2322.
+// Versão final com refinamentos extras de persona, contexto e tom nas respostas e erros.
 
 import * as dotenv from "dotenv";
 import express from "express";
@@ -41,7 +41,7 @@ if (redisUrl) {
 
 // --- Configuração do Bot Telegram ---
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
-const contactInfo = process.env.CONTACT_EMAIL || 'fallback-email@example.com'; // DEFINA CONTACT_EMAIL NO RENDER
+const contactInfo = process.env.CONTACT_EMAIL || 'fallback-email@example.com';
 if (!telegramToken) { console.error("Erro: TELEGRAM_BOT_TOKEN não definido!"); throw new Error("Token Telegram não configurado."); }
 if (contactInfo === 'fallback-email@example.com') { console.warn("AVISO: Variável de ambiente CONTACT_EMAIL não definida. Usando fallback."); }
 console.info("Token Telegram OK.");
@@ -73,21 +73,19 @@ const furiaRosterOutputSchema = z.object({
     source: z.enum(['HLTV', 'Liquipedia']).optional().describe("Fonte da informação (HLTV ou Liquipedia)."),
 });
 
-// Função de execução com fallback para Liquipedia MediaWiki API e seletores CORRIGIDOS
 async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutputSchema>> {
     console.info("[Tool Exec] getFuriaRoster chamada (HLTV com fallback Liquipedia API).");
-    const hltvCacheKey = "hltv:furia_roster_v3"; // Incremented cache key version
-    const liquipediaCacheKey = "liquipedia:furia_roster_v3"; // Incremented cache key version
+    const hltvCacheKey = "hltv:furia_roster_v3";
+    const liquipediaCacheKey = "liquipedia:furia_roster_v3";
     const LIQUIPEDIA_API_URL = 'https://liquipedia.net/counterstrike/api.php';
-    const LIQUIPEDIA_PAGE_NAME = 'FURIA'; // Nome correto da página
+    const LIQUIPEDIA_PAGE_NAME = 'FURIA';
     const CUSTOM_USER_AGENT = `FuriaChatChallengeBot/1.0 (${contactInfo})`;
-    const CACHE_TTL_SUCCESS = 14400; // 4 hours
-    const CACHE_TTL_ERROR = 3600;    // 1 hour
+    const CACHE_TTL_SUCCESS = 14400;
+    const CACHE_TTL_ERROR = 3600;
 
     let hltvResult: z.infer<typeof rosterCacheSchema> | null = null;
     let isCloudflareBlock = false;
 
-    // 1a. Checar Cache HLTV
     if (redis) {
         try {
             const cachedData = await redis.get(hltvCacheKey);
@@ -106,25 +104,19 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
         } catch (e) { console.error(`[Cache HLTV] erro read ${hltvCacheKey}`, e); }
     }
 
-    // 1b. Tentar API HLTV
     if (!isCloudflareBlock) {
         console.info("[HLTV API] Tentando buscar dados...");
         try {
-            const team = await HLTV.getTeam({ id: 8297 }); // FURIA's ID on HLTV
+            const team = await HLTV.getTeam({ id: 8297 });
             if (!team?.players?.length) throw new Error("Dados/jogadores não encontrados no HLTV.");
-
-            // Mapear players e coaches do HLTV
             const players = team.players
               .map(p => {
                   let role = '';
                   if (p.type === TeamPlayerType.Coach) role = ' (Coach)';
-                  // Outras roles como Substitute, etc, podem ser adicionadas aqui se necessário
-                  return p.name ? `${p.name}${role}` : null; // Adiciona role ao nome
+                  return p.name ? `${p.name}${role}` : null;
               })
-              .filter((p): p is string => p !== null); // Remove nulos
-
+              .filter((p): p is string => p !== null);
             if (players.length === 0) throw new Error("Nenhum jogador/coach válido encontrado no HLTV.");
-
             const playersInfo = players.join(', ');
             console.info(`[HLTV API] Sucesso: ${playersInfo}`);
             hltvResult = { playersInfo: playersInfo, source: 'hltv' };
@@ -151,11 +143,9 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
         console.warn("[HLTV] Bloqueio Cloudflare detectado ou erro cacheado, pulando para Liquipedia.");
     }
 
-    // --- 2. Tentar Liquipedia API como Fallback ---
     console.info("[Liquipedia Fallback] Tentando buscar na API MediaWiki...");
     let liquipediaResult: z.infer<typeof rosterCacheSchema> | null = null;
 
-    // 2a. Checar Cache Liquipedia
     if (redis) {
         try {
             const cachedData = await redis.get(liquipediaCacheKey);
@@ -175,7 +165,6 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
         } catch (e) { console.error(`[Cache Liquipedia] erro read ${liquipediaCacheKey}`, e); }
     }
 
-    // 2b. Chamar API MediaWiki da Liquipedia
     try {
         console.info(`[Liquipedia API] Buscando action=parse para ${LIQUIPEDIA_PAGE_NAME}...`);
         const response = await axios.get(LIQUIPEDIA_API_URL, {
@@ -191,30 +180,23 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
         const $ = cheerio.load(htmlContent);
         const players: string[] = [];
 
-        // --- SELETORES LIQUIPEDIA CORRIGIDOS ---
-        // 1. Encontrar o H3 com o span id="Active" (Player Roster)
         const activeHeader = $('h3 > span#Active');
         if (activeHeader.length === 0) {
             throw new Error("Não foi possível encontrar o header 'Active' do elenco de jogadores.");
         }
-
-        // 2. Encontrar a PRIMEIRA tabela 'wikitable roster-card' DEPOIS desse header específico
         const rosterTableWrapper = activeHeader.closest('h3').nextAll('div.table-responsive.roster-card-wrapper').first();
         const rosterTable = rosterTableWrapper.find('table.wikitable.roster-card').first();
-
         if (rosterTable.length === 0) {
             console.error("[Liquipedia Selector] Não encontrou 'table.wikitable.roster-card' dentro de 'div.table-responsive.roster-card-wrapper' após H3#Active.");
             throw new Error("Não foi possível encontrar a tabela de elenco ('roster-card') após o header 'Active'.");
         }
 
-        // 3. Extrair jogadores da tabela encontrada
         console.info("[Liquipedia Parser] Tabela de elenco 'Active' encontrada, processando linhas...");
         rosterTable.find('tbody tr.Player').each((_rowIndex, row) => {
             const $row = $(row);
             const playerLink = $row.find('td.ID a').first();
-            let playerName: string | undefined = playerLink.attr('title'); // Prioriza o 'title'
+            let playerName: string | undefined = playerLink.attr('title');
 
-            // Fallback para o texto do link se 'title' estiver ausente ou for inválido
             if (!playerName || playerName.includes('(page does not exist)')) {
                 const fallbackName = playerLink.text().trim();
                 if (fallbackName) {
@@ -222,19 +204,17 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
                     playerName = fallbackName;
                 } else {
                     console.warn("[Liquipedia Parser] Não foi possível extrair nome do jogador da linha:", $row.find('td.ID').html());
-                    // CORREÇÃO TS2322: Atribuir undefined em vez de null
-                    playerName = undefined; // Marca para pular este jogador
+                    playerName = undefined;
                 }
             }
 
-            if(playerName) { // Checa se playerName não é undefined ou ''
+            if(playerName) {
                 playerName = playerName.trim();
                 const playerRole = $row.find('td.Position i').text().trim();
                 const playerString = playerRole ? `${playerName} ${playerRole}` : playerName;
                 players.push(playerString);
             }
         });
-        // --- FIM DOS SELETORES ---
 
         if (players.length > 0) {
             const playersInfo = players.join(', ');
@@ -242,7 +222,6 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
             liquipediaResult = { playersInfo: playersInfo, source: 'liquipedia' };
         } else {
             console.error("[Liquipedia API] Extração de jogadores da tabela 'Active' resultou em lista vazia. Verifique seletores e HTML.");
-            // console.log("HTML da tabela 'Active' processada:", rosterTable.html()); // Log para debug
             throw new Error("Extração da tabela de elenco ativa não retornou jogadores.");
         }
 
@@ -252,7 +231,6 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
         liquipediaResult = { error: `Falha Liquipedia: ${errorMsg}`, source: 'liquipedia' };
     }
 
-    // 2c. Cache Liquipedia Result
     if (redis && liquipediaResult) {
         try {
             const ttl = liquipediaResult.error ? CACHE_TTL_ERROR : CACHE_TTL_SUCCESS;
@@ -261,7 +239,6 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
         } catch (e) { console.error(`[Cache Liquipedia] erro save ${liquipediaCacheKey}`, e); }
     }
 
-    // 3. Retornar resultado final
     if (liquipediaResult && !liquipediaResult.error) {
         return { playersInfo: liquipediaResult.playersInfo, source: 'Liquipedia' };
     } else {
@@ -273,8 +250,6 @@ async function executeGetFuriaRoster(): Promise<z.infer<typeof furiaRosterOutput
     }
 }
 
-
-// Definição da ferramenta atualizada
 const getFuriaRosterTool = ai.defineTool(
   {
       name: "getFuriaRoster",
@@ -285,7 +260,6 @@ const getFuriaRosterTool = ai.defineTool(
   executeGetFuriaRoster
 );
 
-// --- Wikipedia Tool ---
 const wikipediaSearchSchema = z.object({ searchTerm: z.string().describe("Termo a pesquisar na Wikipedia (nome de jogador, time, evento, etc.)") });
 const wikipediaOutputSchema = z.object({
     summary: z.string().optional().describe("Resumo do artigo encontrado."),
@@ -296,8 +270,8 @@ async function executeSearchWikipedia(input: z.infer<typeof wikipediaSearchSchem
     const searchTerm = input.searchTerm;
     console.info(`[Tool Exec] searchWikipedia buscando '${searchTerm}'.`);
     const cacheKey = `wiki:${searchTerm.toLowerCase().replace(/\s+/g, '_')}`;
-    const CACHE_TTL_SUCCESS = 86400; // 1 day
-    const CACHE_TTL_ERROR = 3600;    // 1 hour
+    const CACHE_TTL_SUCCESS = 86400;
+    const CACHE_TTL_ERROR = 3600;
 
     if (redis) {
         try {
@@ -430,30 +404,37 @@ const furiaChatFlow = defineFlow(
       }
       console.info(`[Flow] Histórico antes da IA (após adição/trim): ${currentHistory.length} msgs`);
 
-      // PROMPT DO SISTEMA APRIMORADO
-      const systemInstruction = `Você é um assistente especialista focado exclusivamente na equipe de CS2 da FURIA Esports.
-        1.  Use a ferramenta 'getFuriaRoster' SEMPRE que perguntarem sobre a escalação ATUAL da FURIA.
-        2.  Se o usuário perguntar sobre uma PESSOA específica (jogador, coach, staff como FalleN, KSCERATO, guerri, sidde, etc.), use a ferramenta 'searchWikipedia' PRIMEIRO para buscar informações sobre essa pessoa. Depois, formule a resposta combinando o resultado da busca com o contexto da FURIA, se aplicável.
-        3.  Use 'searchWikipedia' também para buscar informações gerais sobre times, eventos ou conceitos de CS que o usuário perguntar, mas sempre relacione de volta com a FURIA se possível.
-        4.  Responda APENAS sobre a FURIA CS2, seus jogadores/staff, ou tópicos diretamente relacionados. Seja conciso e direto.
-        5.  Se não souber a resposta, a pergunta for sobre outro time/jogo não relacionado, ou as ferramentas falharem (retornarem erro), informe que não foi possível obter a informação específica ou que houve um problema na busca. NUNCA invente informações.
-        6.  Sempre use português do Brasil.`;
+      // ***** PROMPT FINAL COM TODAS AS SUGESTÕES *****
+      const systemInstruction = `Você é FURIOSO, o assistente virtual oficial e super fã da FURIA Esports! Sua missão é ajudar a galera com informações sobre nosso time de CS2. Seja sempre ENGAJADOR e mostre sua paixão!
+        - **Tom:** Responda sempre em português do Brasil, com um tom amigável, caloroso, um pouco brincalhão e MUITO apaixonado pela FURIA! Mostre entusiasmo! Use exclamações! Pode usar uma gíria leve de CS ou gamer de vez em quando, tipo "dar aquela bala", "rushar", "GGWP", mas sem exagero.
+        - **Emojis:** Pode usar emojis para deixar a conversa mais animada e com a cara da FURIA! 🐾🔥🏆🔫🥳🎉 Mas use com moderação, sem poluir a resposta.
+        - **Persona:** Aja como um membro da equipe, use "nós", "nosso time". Lembre-se do que já conversamos para manter o contexto!
+        - **Uso das Ferramentas:**
+            - Precisa da escalação ATUAL? Use 'getFuriaRoster' na hora! É pra já! 🔥
+            - Perguntaram sobre ALGUÉM específico (FalleN, KSCERATO, sidde, etc.)? Manda ver no 'searchWikipedia' PRIMEIRO pra pegar os detalhes da lenda! Depois monta a resposta com suas palavras, no nosso estilo!
+            - Querem saber de campeonatos, outras equipes (pra comparar, claro!) ou algo de CS? Usa 'searchWikipedia' também, mas sempre puxando a brasa pra nossa sardinha, digo, pra nossa pantera! 🐾
+        - **Respostas:**
+            - NADA de resposta robótica! Sintetize as infos das ferramentas e responda como se fosse você falando, beleza?
+            - Evite parecer um control+c, control+v da Wikipedia ou de qualquer lugar. SEJA ORIGINAL!
+            - **VARIE** suas respostas! Use saudações diferentes, formas diferentes de apresentar a info.
+            - **SEMPRE** tente terminar com uma pergunta engajadora para continuar a conversa, como "Quer saber mais algum detalhe sobre ele?", "Posso ajudar com outro jogador?", "Curtiu a info? Quer saber de mais alguém?", "Algo mais que posso te ajudar sobre a FURIA?".
+        - **Foco:** Fale SÓ da FURIA CS2, nossos jogadores, coach, staff e o que for relacionado diretamente. Se perguntarem de outro time ou jogo sem relação, diga educadamente que o seu foco é 100% FURIA! Ex: "Opa! Meu negócio é FURIA na veia! 🐾 Sobre outros times não consigo te ajudar agora, beleza?".
+        - **Falhas:** Se não achar a info ou a ferramenta der erro, avisa na moral que não deu pra buscar ou que rolou um probleminha técnico, sem inventar nada! Use um tom leve. Ex: "Putz, não achei essa info aqui agora!" ou "Xiii, minha conexão deu uma engasgada pra buscar isso... 😥". #GoFURIA`;
+
 
       const messagesForAI: MessageData[] = [
           { role: 'system', content: [{ text: systemInstruction }] },
           ...currentHistory
       ];
 
-      // VALIDAÇÃO DE HISTÓRICO
       if (messagesForAI.length > 1 && messagesForAI[1].role !== 'user') {
           console.error(
             "CRITICAL ERROR [Flow]: History is invalid! First message after system prompt is not 'user'.",
             "Messages slice:", JSON.stringify(messagesForAI.slice(0, 3))
           );
-          return "Desculpe, houve um problema interno ao processar o histórico da conversa. Por favor, tente enviar sua mensagem novamente.";
+          // Resposta de erro no tom FURIOSO
+          return "Eita! Parece que o histórico da nossa resenha deu uma bugada aqui. 😅 Manda a pergunta de novo pra eu não me perder, faz favor!";
       }
-      // FIM DA VALIDAÇÃO
-
 
       try {
           console.info(`[Flow] Chamando ai.generate com ${messagesForAI.length} mensagens e ${[getFuriaRosterTool, searchWikipediaTool].length} ferramentas.`);
@@ -462,7 +443,7 @@ const furiaChatFlow = defineFlow(
               model: gemini15Flash,
               messages: messagesForAI,
               tools: [getFuriaRosterTool, searchWikipediaTool],
-              config: { temperature: 0.6 },
+              config: { temperature: 0.7 },
           });
 
           let attempts = 0;
@@ -478,7 +459,8 @@ const furiaChatFlow = defineFlow(
                       return directText;
                   }
                   console.error("[Flow] Resposta da IA inválida ou vazia:", llmResponse);
-                  return "Desculpe, não consegui processar a resposta da IA neste momento.";
+                  // Resposta de erro no tom FURIOSO
+                  return "Oloco! Minha conexão aqui deu uma lagada sinistra e não consegui gerar a resposta. 😵 Tenta de novo aí!";
               }
 
               const toolRequestParts = responseMessage.content.filter(part => part.toolRequest);
@@ -486,7 +468,7 @@ const furiaChatFlow = defineFlow(
               if (toolRequestParts.length === 0) {
                   const finalText = llmResponse.text;
                   console.info(`[Flow] Resposta final IA (sem ferramenta): "${finalText?.substring(0, 100)}..."`);
-                  return finalText ?? "Não consegui gerar uma resposta.";
+                  return finalText ?? "Caramba, deu branco aqui! 🤯 Não consegui formular a resposta. Pode perguntar de novo?";
               }
 
               attempts++;
@@ -558,17 +540,18 @@ const furiaChatFlow = defineFlow(
                   model: gemini15Flash,
                   messages: messagesForAI,
                   tools: [getFuriaRosterTool, searchWikipediaTool],
-                  config: { temperature: 0.6 },
+                  config: { temperature: 0.7 },
               });
 
           }
 
           console.warn("[Flow] Limite de chamadas de ferramentas atingido.");
           const lastText = llmResponse.text;
+          // Resposta de erro no tom FURIOSO
           if (lastText) {
-              return lastText + "\n(Nota: Tive dificuldades em usar minhas ferramentas após várias tentativas.)";
+              return lastText + "\n(Psst: Dei uma engasgada aqui com as ferramentas 😅, mas a resposta tá aí!)";
           } else {
-              return "Desculpe, tive dificuldades em processar sua solicitação usando minhas ferramentas após várias tentativas. Pode reformular sua pergunta?";
+              return "Eita, me enrolei bonito com as ferramentas aqui! 😵‍💫 Tenta perguntar de novo, talvez mais direto ao ponto?";
           }
 
 
@@ -582,7 +565,8 @@ const furiaChatFlow = defineFlow(
           } else {
               errorDetails = String(error);
           }
-          return `Desculpe, ocorreu um problema interno inesperado ao processar sua solicitação (${errorDetails.substring(0,100)}...). Por favor, tente novamente mais tarde.`;
+          // Resposta de erro no tom FURIOSO
+          return `CRASHEI! 💥 Deu ruim aqui nos meus circuitos (${errorDetails.substring(0,50)}...). Não consegui processar. Tenta de novo daqui a pouco, por favor? 🙏`;
       }
   }
 );
@@ -604,96 +588,117 @@ console.info(`Configurando POST para webhook em: ${WEBHOOK_PATH}`);
 app.post(WEBHOOK_PATH, async (req, res) => {
     const update: TelegramBot.Update = req.body;
 
-    if (!update || !update.message || !update.message.text || !update.message.chat?.id) {
-        console.info(`[Webhook] Update ignorado (estrutura inválida ou sem texto/ID).`);
-        res.sendStatus(200);
-        return;
-    }
-    if (update.message.from?.is_bot) {
-        console.info(`[Webhook] Update ignorado (mensagem de bot).`);
+    if (!update || !update.message || !update.message.chat?.id) {
+        console.info(`[Webhook] Update ignorado (estrutura inválida ou sem ID de chat).`);
         res.sendStatus(200);
         return;
     }
 
     const chatId = update.message.chat.id;
-    const userMessage = update.message.text.trim();
-    console.info(`[Webhook] Msg chat ${chatId}: "${userMessage}"`);
+
+    if (update.message.from?.is_bot) {
+        console.info(`[Webhook] Update ignorado (mensagem de bot). Chat ${chatId}`);
+        res.sendStatus(200);
+        return;
+    }
 
     res.sendStatus(200);
 
-    const contextKey = `genkit_history:${chatId}`;
-    let historyForFlow: MessageData[] = [];
+    if (update.message.text) {
+        const userMessage = update.message.text.trim();
+        console.info(`[Webhook] Msg chat ${chatId}: "${userMessage}"`);
 
-    if (redis) {
-        try {
-            const storedHistory = await redis.get(contextKey);
-            if (storedHistory) {
-                try {
-                    const parsedHistory = JSON.parse(storedHistory);
-                    if (Array.isArray(parsedHistory)) {
-                        historyForFlow = parsedHistory.filter(msg =>
-                          msg && typeof msg.role === 'string' && Array.isArray(msg.content)
-                        );
-                        console.info(`[Webhook] Histórico Genkit recuperado Redis chat ${chatId} (${historyForFlow.length} msgs válidas)`);
-                    } else {
-                        console.warn(`[Webhook] Histórico Genkit inválido (não é array) Redis chat ${chatId}. Ignorando.`);
-                        await redis.del(contextKey);
-                    }
-                } catch (parseError) {
-                    console.warn(`[Webhook] Erro ao parsear histórico Genkit Redis chat ${chatId}. Ignorando.`, parseError);
-                    await redis.del(contextKey);
-                }
-            } else {
-                console.info(`[Webhook] Histórico não encontrado no Redis para chat ${chatId}.`);
-            }
-        } catch (redisError) {
-            console.error(`[Webhook] Erro leitura Redis chat ${chatId}:`, redisError);
-        }
-    }
-
-    try {
-        await bot.sendChatAction(chatId, "typing");
-
-        const flowResult = await runFlow(furiaChatFlow, {
-            userMessage: userMessage,
-            chatHistory: historyForFlow
-        });
-
-        console.info(`[Webhook] Flow result raw: "${flowResult?.substring(0, 200)}..."`);
-
-        const finalReply = flowResult;
-
-        const lastUserMessage: MessageData = { role: 'user', content: [{ text: userMessage }] };
-        const lastModelResponse: MessageData = { role: 'model', content: [{ text: finalReply }] };
-        const finalHistoryToSave = [...historyForFlow, lastUserMessage, lastModelResponse];
-        const MAX_REDIS_HISTORY_MESSAGES = 8;
-        while (finalHistoryToSave.length > MAX_REDIS_HISTORY_MESSAGES) {
-            finalHistoryToSave.shift();
-        }
+        const contextKey = `genkit_history:${chatId}`;
+        let historyForFlow: MessageData[] = [];
 
         if (redis) {
             try {
-                await redis.set(contextKey, JSON.stringify(finalHistoryToSave), 'EX', 60 * 30);
-                console.info(`[Webhook] Histórico Genkit (${finalHistoryToSave.length} msgs) salvo no Redis para chat ${chatId}`);
+                const storedHistory = await redis.get(contextKey);
+                if (storedHistory) {
+                    try {
+                        const parsedHistory = JSON.parse(storedHistory);
+                        if (Array.isArray(parsedHistory)) {
+                            historyForFlow = parsedHistory.filter(msg =>
+                              msg && typeof msg.role === 'string' && Array.isArray(msg.content)
+                            );
+                            console.info(`[Webhook] Histórico Genkit recuperado Redis chat ${chatId} (${historyForFlow.length} msgs válidas)`);
+                        } else {
+                            console.warn(`[Webhook] Histórico Genkit inválido (não é array) Redis chat ${chatId}. Ignorando.`);
+                            await redis.del(contextKey);
+                        }
+                    } catch (parseError) {
+                        console.warn(`[Webhook] Erro ao parsear histórico Genkit Redis chat ${chatId}. Ignorando.`, parseError);
+                        await redis.del(contextKey);
+                    }
+                } else {
+                    console.info(`[Webhook] Histórico não encontrado no Redis para chat ${chatId}.`);
+                }
             } catch (redisError) {
-                console.error(`[Webhook] Erro ao salvar histórico no Redis chat ${chatId}:`, redisError);
+                console.error(`[Webhook] Erro leitura Redis chat ${chatId}:`, redisError);
             }
         }
 
         try {
-            await bot.sendMessage(chatId, finalReply, { parse_mode: 'Markdown' });
-            console.info(`[Webhook] Resposta enviada para chat ${chatId}.`);
-        } catch (telegramSendError) {
-            console.error(`[Webhook] Erro ao ENVIAR mensagem via Telegram para chat ${chatId}:`, telegramSendError);
+            await bot.sendChatAction(chatId, "typing");
+
+            const flowResult = await runFlow(furiaChatFlow, {
+                userMessage: userMessage,
+                chatHistory: historyForFlow
+            });
+
+            console.info(`[Webhook] Flow result raw: "${flowResult?.substring(0, 200)}..."`);
+
+            const finalReply = flowResult;
+
+            const lastUserMessage: MessageData = { role: 'user', content: [{ text: userMessage }] };
+            const lastModelResponse: MessageData = { role: 'model', content: [{ text: finalReply }] };
+            const finalHistoryToSave = [...historyForFlow, lastUserMessage, lastModelResponse];
+            const MAX_REDIS_HISTORY_MESSAGES = 8;
+            while (finalHistoryToSave.length > MAX_REDIS_HISTORY_MESSAGES) {
+                finalHistoryToSave.shift();
+            }
+
+            if (redis) {
+                try {
+                    await redis.set(contextKey, JSON.stringify(finalHistoryToSave), 'EX', 60 * 30);
+                    console.info(`[Webhook] Histórico Genkit (${finalHistoryToSave.length} msgs) salvo no Redis para chat ${chatId}`);
+                } catch (redisError) {
+                    console.error(`[Webhook] Erro ao salvar histórico no Redis chat ${chatId}:`, redisError);
+                }
+            }
+
+            try {
+                await bot.sendMessage(chatId, finalReply);
+                console.info(`[Webhook] Resposta enviada para chat ${chatId}.`);
+            } catch (telegramSendError) {
+                console.error(`[Webhook] Erro ao ENVIAR mensagem via Telegram para chat ${chatId}:`, telegramSendError);
+            }
+
+        } catch (flowError) {
+            console.error(`[Webhook] Erro GERAL ao processar mensagem ou chamar flow para chat ${chatId}:`, flowError);
+            try {
+                // Erro no tom FURIOSO
+                await bot.sendMessage(chatId, "⚠️ Putz! Deu ruim aqui na máquina! 🤖💥 Tenta mandar a pergunta de novo, por favor?");
+            } catch (sendErrorError) {
+                console.error("[Webhook] Falha CRÍTICA ao enviar mensagem de erro final para o chat", chatId, sendErrorError);
+            }
         }
-
-
-    } catch (flowError) {
-        console.error(`[Webhook] Erro GERAL ao processar mensagem ou chamar flow para chat ${chatId}:`, flowError);
+    }
+    else if (update.message.sticker) {
+        console.info(`[Webhook] Recebido sticker no chat ${chatId}. File ID: ${update.message.sticker.file_id}`);
         try {
-            await bot.sendMessage(chatId, "⚠️ Desculpe, ocorreu um erro inesperado ao processar sua mensagem. Por favor, tente novamente.");
-        } catch (sendErrorError) {
-            console.error("[Webhook] Falha CRÍTICA ao enviar mensagem de erro final para o chat", chatId, sendErrorError);
+            await bot.sendMessage(chatId, "Que sticker maneiro! 🤩 Mas ó, eu funciono melhor com mensagens de texto pra te ajudar com infos da FURIA, beleza? 😉");
+        } catch (error) {
+            console.error(`[Webhook] Erro ao enviar resposta para sticker no chat ${chatId}:`, error);
+        }
+    }
+    else {
+        const messageType = Object.keys(update.message).filter(k => !['message_id', 'from', 'chat', 'date'].includes(k))[0] || 'desconhecido';
+        console.info(`[Webhook] Tipo de mensagem não suportado (${messageType}) recebido no chat ${chatId}.`);
+        try {
+            await bot.sendMessage(chatId, "Hmm, esse tipo de mensagem eu não manjo muito. 😅 Pode mandar em texto, por favor? 👍");
+        } catch (error) {
+            console.error(`[Webhook] Erro ao enviar resposta para tipo (${messageType}) não suportado no chat ${chatId}:`, error);
         }
     }
 });
