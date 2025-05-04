@@ -514,7 +514,7 @@ async function executeGetFuriaRecentResultsRapidAPI(): Promise<z.infer<typeof re
         const awayScore = match.awayScore?.display ?? match.awayScore?.current ?? "?";
         const tournament = match.tournament?.name ?? "?";
         const winnerCode = match.winnerCode;
-        let opponent = "?";
+        let opponent: string;
         let fScore = "?";
         let oScore = "?";
         let outcome = "";
@@ -1149,11 +1149,10 @@ app.post(WEBHOOK_PATH, async (req, res) => {
     }
     try {
       await bot.sendChatAction(chatId, "typing");
-      const flowResult = await runFlow(furiaChatFlow, {
+      const finalReply = await runFlow(furiaChatFlow, {
         userMessage: userMessage,
         chatHistory: historyForFlow,
       });
-      const finalReply = flowResult;
       console.info(`[Webhook] Flow raw: "${finalReply.substring(0, 200)}..."`);
       const lastUser: MessageData = {
         role: "user",
