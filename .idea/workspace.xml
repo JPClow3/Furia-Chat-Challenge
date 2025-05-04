@@ -9,6 +9,8 @@
   <component name="ChangeListManager">
     <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/functions/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -137,7 +139,7 @@
       <workItem from="1745864893853" duration="8319000" />
       <workItem from="1746041097368" duration="12709000" />
       <workItem from="1746116453505" duration="6522000" />
-      <workItem from="1746151650911" duration="28921000" />
+      <workItem from="1746151650911" duration="29909000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -275,7 +277,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746321245614</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="Refactor FURIA roster fetch with improved API integration and error handling&#10;&#10;- Enhanced RapidAPI and Liquipedia scraper integration for fetching upcoming matches and recent results.&#10;- Improved TypeScript type assignments and resolved TS2322 errors.&#10;- Updated HTML parsing logic with corrected selectors for player roles.&#10;- Enhanced error handling for HLTV API calls and added fallback to Liquipedia.&#10;- Updated bot responses to maintain an engaging and friendly tone.">
+      <option name="closed" value="true" />
+      <created>1746327590360</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1746327590360</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -300,7 +310,6 @@
     <option name="CODE_SMELLS_PROFILE" value="Default" />
     <option name="CHECK_NEW_TODO" value="false" />
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
-    <MESSAGE value="Refactor HTML structure, enhance CSS styles, and update Qodana configuration" />
     <MESSAGE value="Remove .gitignore and add Qodana SARIF report.&#10;&#10;Deleted the `.gitignore` file for the `functions/` folder, which included rules for dependencies, logs, and build output. Added a `qodana.sarif.json` file containing a detailed report of code quality analysis." />
     <MESSAGE value="Remove .gitignore from functions and add Qodana SARIF file&#10;&#10;The `.gitignore` file specific to the `functions` folder has been deleted. A new `qodana.sarif.json` file has been added, likely containing Qodana analysis results. Verify changes related to build processes and code quality configurations." />
     <MESSAGE value="Update Firebase and TypeScript configurations, add dotenv dependency, and enhance chat interface" />
@@ -325,7 +334,8 @@
     <MESSAGE value="Refactor FURIA roster fetch to correct type assignments and enhance error handling&#10;&#10;- Fixed TypeScript error TS2322 related to player name assignments.&#10;- Updated Cheerio selectors for improved parsing of active player rosters from Liquipedia.&#10;- Enhanced error messaging for HLTV connection issues and added fallback logic to Liquipedia API.&#10;- Improved caching mechanisms and refined output schema for clearer data representation." />
     <MESSAGE value="Refactor FURIA roster fetch with improved parsing and logic&#10;&#10;- Resolved TypeScript error TS2322 in player name assignments.&#10;- Refined HTML parsing with updated Liquipedia selectors and improved player role extraction.&#10;- Enhanced error handling, added HLTV fallback with detailed messaging, and updated caching strategies." />
     <MESSAGE value="Refactor FURIA roster fetch with enhanced error handling and refined messaging&#10;&#10;- Improved TypeScript type assignments and resolved TS2322 errors.&#10;- Updated HTML parsing logic with corrected Liquipedia selectors for player roles.&#10;- Enhanced error handling for HLTV API calls and added fallback to Liquipedia.&#10;- Updated bot responses to maintain an engaging and friendly tone." />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor FURIA roster fetch with enhanced error handling and refined messaging&#10;&#10;- Improved TypeScript type assignments and resolved TS2322 errors.&#10;- Updated HTML parsing logic with corrected Liquipedia selectors for player roles.&#10;- Enhanced error handling for HLTV API calls and added fallback to Liquipedia.&#10;- Updated bot responses to maintain an engaging and friendly tone." />
+    <MESSAGE value="Refactor FURIA roster fetch with improved API integration and error handling&#10;&#10;- Enhanced RapidAPI and Liquipedia scraper integration for fetching upcoming matches and recent results.&#10;- Improved TypeScript type assignments and resolved TS2322 errors.&#10;- Updated HTML parsing logic with corrected selectors for player roles.&#10;- Enhanced error handling for HLTV API calls and added fallback to Liquipedia.&#10;- Updated bot responses to maintain an engaging and friendly tone." />
+    <option name="LAST_COMMIT_MESSAGE" value="Refactor FURIA roster fetch with improved API integration and error handling&#10;&#10;- Enhanced RapidAPI and Liquipedia scraper integration for fetching upcoming matches and recent results.&#10;- Improved TypeScript type assignments and resolved TS2322 errors.&#10;- Updated HTML parsing logic with corrected selectors for player roles.&#10;- Enhanced error handling for HLTV API calls and added fallback to Liquipedia.&#10;- Updated bot responses to maintain an engaging and friendly tone." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
