@@ -73,18 +73,23 @@ Antes de começar, garanta que você possui:
 
 O código principal do bot reside no diretório `functions/`:
 
+## Estrutura do Projeto
+
+A estrutura principal do projeto é a seguinte:
+
+```text
 furia-chat-challenge/
-├── functions/
-│   ├── src/
-│   │   └── index.ts       # Código principal: Lógica do Bot, Genkit Flow, Ferramentas, Express API
-│   ├── lib/               # Código JavaScript compilado (gerado pelo build)
-│   ├── .env               # Arquivo para variáveis de ambiente (NÃO versionar!)
-│   ├── package.json       # Dependências e scripts NPM
-│   ├── tsconfig.json      # Configurações do TypeScript
-│   └── ...                # Outros arquivos de configuração (ESLint, etc.)
-├── firebase.json          # Configurações do Firebase (deploy, emuladores)
-├── genkit.config.ts       # Configuração dos plugins Genkit (AI, Firebase)
-└── README.md              # Este arquivo
+  functions/
+    src/
+      index.ts       # Código principal: Lógica do Bot, Genkit Flow, Ferramentas, Express API
+    lib/               # Código JavaScript compilado (gerado pelo build)
+    .env               # Arquivo para variáveis de ambiente (NÃO versionar!)
+    package.json       # Dependências e scripts NPM
+    tsconfig.json      # Configurações do TypeScript
+    ...                # Outros arquivos de configuração (ESLint, etc.)
+  firebase.json          # Configurações do Firebase (deploy, emuladores)
+  genkit.config.ts       # Configuração dos plugins Genkit (AI, Firebase)
+  README.md              # O arquivo de documentação
 
 ## Setup e Instalação
 
