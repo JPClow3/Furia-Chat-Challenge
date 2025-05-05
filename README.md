@@ -90,7 +90,7 @@ furia-chat-challenge/
   firebase.json          # Configurações do Firebase (deploy, emuladores)
   genkit.config.ts       # Configuração dos plugins Genkit (AI, Firebase)
   README.md              # O arquivo de documentação
-
+```
 ## Setup e Instalação
 
 1.  **Clonar o Repositório:**
