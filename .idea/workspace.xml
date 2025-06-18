@@ -7,10 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/functions/src/index.ts" afterDir="false" />
-    </list>
+    <list default="true" id="7370273c-3dd9-49ed-9bd8-7a7c6718c9e1" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -36,6 +33,7 @@
       </GitPushTagMode>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
@@ -64,6 +62,7 @@
 }</component>
   <component name="ProjectId" id="2wBySvxdxraoiEh1c7mdJVK37Th" />
   <component name="ProjectLevelVcsManager">
+    <OptionsSetting value="false" id="Update" />
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
@@ -141,7 +140,7 @@
       <workItem from="1746330286171" duration="24000" />
       <workItem from="1746330329557" duration="541000" />
       <workItem from="1746361329886" duration="2797000" />
-      <workItem from="1746382164395" duration="8064000" />
+      <workItem from="1746382164395" duration="8189000" />
     </task>
     <task id="LOCAL-00001" summary="Add initial configuration files for JavaScript libraries, Prettier, Qodana, and VCS">
       <option name="closed" value="true" />
@@ -335,7 +334,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746401411157</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="Refactor and enhance cache handling, error messages, and APIs&#10;&#10;Improved overall code maintainability by refining formatting, optimizing redundancy, and enhancing structural clarity. Enhanced caching mechanisms with better validation, added more descriptive error messages, and updated API configurations for better fault tolerance. These updates also include schema refinements and additional handling for external data sources.">
+      <option name="closed" value="true" />
+      <created>1746407561096</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1746407561096</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -360,7 +367,6 @@
     <option name="CODE_SMELLS_PROFILE" value="Default" />
     <option name="CHECK_NEW_TODO" value="false" />
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
-    <MESSAGE value="Remove frontend files for FURIA CS chatbot.&#10;&#10;Deleted `index.html`, `script.js`, `styles.css`, and associated assets as they are no longer needed. This simplifies the project by removing unused frontend components." />
     <MESSAGE value="Refactor Express webhook handler and update project files&#10;&#10;Simplified the Express webhook handler by improving response flow and logging clarity. Added a frontend cleanup task to workspace.xml and removed unused frontend files. Updated package.json to fix script duplication in the &quot;build&quot; command." />
     <MESSAGE value="Remove unused frontend files and refine backend logic&#10;&#10;Deleted redundant frontend assets, including `index.html`, `script.js`, `styles.css`, and others, to streamline the project. Improved back-end code by adjusting async behavior, refining webhook handling, and enhancing error logging and response handling. Updated `package.json` with new build scripts for improved development workflow." />
     <MESSAGE value="Refactor backend and streamline project setup&#10;&#10;Improved Express webhook handling, added environment variable debugging, and refined error management. Updated `functions/package.json` to clean up scripts and dependencies, removing unused items. Adjusted various files to enhance code consistency, simplify logic, and align with best practices." />
@@ -385,7 +391,8 @@
     <MESSAGE value="Refactor index.ts for improved code clarity and update prompt version to v4" />
     <MESSAGE value="Refactor index.ts for improved maintainability&#10;&#10;Streamlined the codebase by enhancing formatting, reducing redundant code, and making various structural optimizations. These changes improve code clarity and ensure better readability while incorporating prompt version updates and reactivating scrapers." />
     <MESSAGE value="Refactor index.ts and enhance maintainability&#10;&#10;Optimized index.ts with improved formatting, reduced redundancy, and structural updates for better readability and maintainability. Introduced parallelized data fetching for FURIA roster, added caching enhancements, and implemented error handling for external API integrations. Updated tooling with refined schemas and new functionality to streamline responses." />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor index.ts and enhance maintainability&#10;&#10;Optimized index.ts with improved formatting, reduced redundancy, and structural updates for better readability and maintainability. Introduced parallelized data fetching for FURIA roster, added caching enhancements, and implemented error handling for external API integrations. Updated tooling with refined schemas and new functionality to streamline responses." />
+    <MESSAGE value="Refactor and enhance cache handling, error messages, and APIs&#10;&#10;Improved overall code maintainability by refining formatting, optimizing redundancy, and enhancing structural clarity. Enhanced caching mechanisms with better validation, added more descriptive error messages, and updated API configurations for better fault tolerance. These updates also include schema refinements and additional handling for external data sources." />
+    <option name="LAST_COMMIT_MESSAGE" value="Refactor and enhance cache handling, error messages, and APIs&#10;&#10;Improved overall code maintainability by refining formatting, optimizing redundancy, and enhancing structural clarity. Enhanced caching mechanisms with better validation, added more descriptive error messages, and updated API configurations for better fault tolerance. These updates also include schema refinements and additional handling for external data sources." />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
